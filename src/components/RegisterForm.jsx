@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { useAuth } from '../context/AuthContext'
+import { useNavigate } from 'react-router-dom'
 
 function Tooltip({ children, text }) {
     return (
@@ -10,14 +12,18 @@ function Tooltip({ children, text }) {
 }
 
 export default function RegisterForm() {
+    const { register } = useAuth()
+    const navigate = useNavigate()
     const [form, setForm] = useState({
         username: '',
         email: '',
         password: '',
+        code: '',
     })
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
     const [success, setSuccess] = useState(false)
+    const [step, setStep] = useState('register') // 'register' or 'verify'
 
     const handleChange = (e) => {
         const { name, value } = e.target
@@ -32,7 +38,7 @@ export default function RegisterForm() {
         return ''
     }
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault()
         setError('')
         setSuccess(false)
@@ -40,12 +46,44 @@ export default function RegisterForm() {
         if (err) { setError(err); return }
 
         setLoading(true)
-        // Simulate async registration
-        setTimeout(() => {
-            setLoading(false)
+        try {
+            const result = await register(form.username, form.email, form.password)
+            if (result.requiresVerification) {
+                setLoading(false)
+                setStep('verify')
+                return
+            }
             setSuccess(true)
-            setForm({ username: '', email: '', password: '' })
-        }, 1500)
+            setTimeout(() => {
+                navigate('/dashboard')
+            }, 1500)
+        } catch (err) {
+            setError(err.message || 'Failed to create account. Username or email may already be taken.')
+            setLoading(false)
+        }
+    }
+
+    const { verify } = useAuth()
+
+    const handleVerify = async (e) => {
+        e.preventDefault()
+        setError('')
+        if (!form.code.trim()) {
+            setError('Please enter the verification code.')
+            return
+        }
+
+        setLoading(true)
+        try {
+            await verify(form.email, form.code)
+            setSuccess(true)
+            setTimeout(() => {
+                navigate('/dashboard')
+            }, 1500)
+        } catch (err) {
+            setError(err.message || 'Invalid verification code.')
+            setLoading(false)
+        }
     }
 
     return (
@@ -54,12 +92,12 @@ export default function RegisterForm() {
             <div className="mb-8">
                 <h2 className="text-2xl font-bold text-white mb-2 flex items-center gap-2">
                     <span className="material-symbols-outlined" style={{ color: '#ffb800' }}>
-                        person_add
+                        {step === 'register' ? 'person_add' : 'mark_email_read'}
                     </span>
-                    Register
+                    {step === 'register' ? 'Register' : 'Verify Email'}
                 </h2>
                 <p style={{ color: '#94a3b8', fontSize: '0.875rem' }}>
-                    Start your journey today.
+                    {step === 'register' ? 'Start your journey today.' : `We sent a code to ${form.email}`}
                 </p>
             </div>
 
@@ -76,7 +114,7 @@ export default function RegisterForm() {
                     <span className="material-symbols-outlined" style={{ fontSize: '1.1rem' }}>
                         check_circle
                     </span>
-                    Account created! Check your email to verify.
+                    Account created successfully! Redirecting...
                 </div>
             )}
 
@@ -97,113 +135,171 @@ export default function RegisterForm() {
                 </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-5" noValidate>
-                {/* Username */}
-                <div className="space-y-2">
-                    <div className="flex items-center justify-between">
+            {step === 'register' ? (
+                <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+                    {/* Username */}
+                    <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                            <label
+                                htmlFor="reg-username"
+                                className="text-xs font-bold uppercase tracking-wider"
+                                style={{ color: '#64748b' }}
+                            >
+                                Minecraft Username
+                            </label>
+                            <Tooltip text="Username must exactly match your in-game Minecraft character name.">
+                                <span
+                                    className="material-symbols-outlined cursor-help"
+                                    style={{ color: '#64748b', fontSize: '1rem' }}
+                                >
+                                    info
+                                </span>
+                            </Tooltip>
+                        </div>
+                        <input
+                            id="reg-username"
+                            name="username"
+                            type="text"
+                            autoComplete="username"
+                            placeholder="Your in-game name"
+                            value={form.username}
+                            onChange={handleChange}
+                            className="chiseled-input chiseled-input-gold"
+                            style={{ borderColor: form.username ? undefined : undefined }}
+                        />
+                    </div>
+
+                    {/* Email */}
+                    <div className="space-y-2">
                         <label
-                            htmlFor="reg-username"
-                            className="text-xs font-bold uppercase tracking-wider"
+                            htmlFor="reg-email"
+                            className="block text-xs font-bold uppercase tracking-wider"
                             style={{ color: '#64748b' }}
                         >
-                            Minecraft Username
+                            Email Address
                         </label>
-                        <Tooltip text="Username must exactly match your in-game Minecraft character name.">
-                            <span
-                                className="material-symbols-outlined cursor-help"
-                                style={{ color: '#64748b', fontSize: '1rem' }}
-                            >
-                                info
-                            </span>
-                        </Tooltip>
+                        <input
+                            id="reg-email"
+                            name="email"
+                            type="email"
+                            autoComplete="email"
+                            placeholder="alex@creeper.com"
+                            value={form.email}
+                            onChange={handleChange}
+                            className="chiseled-input chiseled-input-gold"
+                        />
                     </div>
-                    <input
-                        id="reg-username"
-                        name="username"
-                        type="text"
-                        autoComplete="username"
-                        placeholder="Your in-game name"
-                        value={form.username}
-                        onChange={handleChange}
-                        className="chiseled-input chiseled-input-gold"
-                        style={{ borderColor: form.username ? undefined : undefined }}
-                    />
-                </div>
 
-                {/* Email */}
-                <div className="space-y-2">
-                    <label
-                        htmlFor="reg-email"
-                        className="block text-xs font-bold uppercase tracking-wider"
-                        style={{ color: '#64748b' }}
-                    >
-                        Email Address
-                    </label>
-                    <input
-                        id="reg-email"
-                        name="email"
-                        type="email"
-                        autoComplete="email"
-                        placeholder="alex@creeper.com"
-                        value={form.email}
-                        onChange={handleChange}
-                        className="chiseled-input chiseled-input-gold"
-                    />
-                </div>
-
-                {/* Password */}
-                <div className="space-y-2">
-                    <label
-                        htmlFor="reg-password"
-                        className="block text-xs font-bold uppercase tracking-wider"
-                        style={{ color: '#64748b' }}
-                    >
-                        Create Password
-                    </label>
-                    <input
-                        id="reg-password"
-                        name="password"
-                        type="password"
-                        autoComplete="new-password"
-                        placeholder="••••••••"
-                        value={form.password}
-                        onChange={handleChange}
-                        className="chiseled-input chiseled-input-gold"
-                    />
-                    {/* Password strength hint */}
-                    {form.password.length > 0 && (
-                        <PasswordStrength password={form.password} />
-                    )}
-                </div>
-
-                {/* Submit */}
-                <div className="pt-2">
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="w-full font-bold py-4 rounded pixel-border flex items-center justify-center gap-2"
-                        style={{
-                            background: loading ? 'rgba(255,184,0,0.6)' : '#ffb800',
-                            color: '#0f172a',
-                            cursor: loading ? 'not-allowed' : 'pointer',
-                        }}
-                    >
-                        {loading ? (
-                            <>
-                                <span
-                                    className="material-symbols-outlined"
-                                    style={{ fontSize: '1.1rem', animation: 'spin 1s linear infinite' }}
-                                >
-                                    progress_activity
-                                </span>
-                                Creating account…
-                            </>
-                        ) : (
-                            'BEGIN ADVENTURE'
+                    {/* Password */}
+                    <div className="space-y-2">
+                        <label
+                            htmlFor="reg-password"
+                            className="block text-xs font-bold uppercase tracking-wider"
+                            style={{ color: '#64748b' }}
+                        >
+                            Create Password
+                        </label>
+                        <input
+                            id="reg-password"
+                            name="password"
+                            type="password"
+                            autoComplete="new-password"
+                            placeholder="••••••••"
+                            value={form.password}
+                            onChange={handleChange}
+                            className="chiseled-input chiseled-input-gold"
+                        />
+                        {/* Password strength hint */}
+                        {form.password.length > 0 && (
+                            <PasswordStrength password={form.password} />
                         )}
+                    </div>
+
+                    {/* Submit */}
+                    <div className="pt-2">
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="w-full font-bold py-4 rounded pixel-border flex items-center justify-center gap-2"
+                            style={{
+                                background: loading ? 'rgba(255,184,0,0.6)' : '#ffb800',
+                                color: '#0f172a',
+                                cursor: loading ? 'not-allowed' : 'pointer',
+                            }}
+                        >
+                            {loading ? (
+                                <>
+                                    <span
+                                        className="material-symbols-outlined"
+                                        style={{ fontSize: '1.1rem', animation: 'spin 1s linear infinite' }}
+                                    >
+                                        progress_activity
+                                    </span>
+                                    Creating account…
+                                </>
+                            ) : (
+                                'CONTINUE'
+                            )}
+                        </button>
+                    </div>
+                </form>
+            ) : (
+                <form onSubmit={handleVerify} className="space-y-5" noValidate>
+                    <div className="space-y-2">
+                        <label
+                            htmlFor="verify-code"
+                            className="block text-xs font-bold uppercase tracking-wider"
+                            style={{ color: '#64748b' }}
+                        >
+                            6-Digit Verification Code
+                        </label>
+                        <input
+                            id="verify-code"
+                            name="code"
+                            type="text"
+                            placeholder="123456"
+                            value={form.code}
+                            onChange={handleChange}
+                            className="chiseled-input chiseled-input-gold text-center tracking-[0.5em] text-xl"
+                            maxLength={6}
+                        />
+                    </div>
+
+                    <div className="pt-2">
+                        <button
+                            type="submit"
+                            disabled={loading || form.code.length !== 6}
+                            className="w-full font-bold py-4 rounded pixel-border flex items-center justify-center gap-2"
+                            style={{
+                                background: (loading || form.code.length !== 6) ? 'rgba(255,184,0,0.6)' : '#ffb800',
+                                color: '#0f172a',
+                                cursor: (loading || form.code.length !== 6) ? 'not-allowed' : 'pointer',
+                            }}
+                        >
+                            {loading ? (
+                                <>
+                                    <span
+                                        className="material-symbols-outlined"
+                                        style={{ fontSize: '1.1rem', animation: 'spin 1s linear infinite' }}
+                                    >
+                                        progress_activity
+                                    </span>
+                                    Verifying…
+                                </>
+                            ) : (
+                                'BEGIN ADVENTURE'
+                            )}
+                        </button>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => setStep('register')}
+                        className="w-full text-sm text-slate-400 hover:text-white transition-colors py-2"
+                    >
+                        &larr; Back to register
                     </button>
-                </div>
-            </form>
+                </form>
+            )}
 
             {/* Security note */}
             <div

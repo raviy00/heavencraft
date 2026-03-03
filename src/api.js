@@ -3,7 +3,7 @@
  * Centralized fetch wrapper for all backend calls
  */
 
-const API_URL = 'http://localhost:3001/api'
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
 
 function getToken() {
     return localStorage.getItem('hc_token')
@@ -36,6 +36,14 @@ async function request(path, options = {}) {
 export const authApi = {
     me: () => request('/auth/me'),
     logout: () => request('/auth/logout', { method: 'POST' }),
+    login: (data) => request('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify(data),
+    }),
+    register: (data) => request('/auth/register', {
+        method: 'POST',
+        body: JSON.stringify(data),
+    }),
 }
 
 // ── Server ──────────────────────────────────────
@@ -109,6 +117,7 @@ export const mapApi = {
     chunks: (cx = 0, cz = 0, radius = 16) =>
         request(`/map/chunks?cx=${cx}&cz=${cz}&radius=${radius}`),
     pois: () => request('/map/pois'),
+    villages: (x, z) => request(`/map/villages?x=${x}&z=${z}`),
 }
 
 // ── Users ───────────────────────────────────────
@@ -122,4 +131,13 @@ export const userApi = {
         method: 'PATCH',
         body: JSON.stringify({ targetUserId, role }),
     }),
+}
+
+// ── Contact ─────────────────────────────────────
+export const contactApi = {
+    submit: (data) => request('/contact', {
+        method: 'POST',
+        body: JSON.stringify(data),
+    }),
+    list: () => request('/contact'),
 }

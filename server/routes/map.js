@@ -1,4 +1,5 @@
 import { Router } from 'express'
+import Random from 'java-random'
 
 const router = Router()
 
@@ -105,6 +106,61 @@ router.get('/chunks', (req, res) => {
 
 router.get('/pois', (req, res) => {
     res.json(POIS)
+})
+
+// Endpoint to find nearest villages based on seed
+router.get('/villages', (req, res) => {
+    const { x = 0, z = 0 } = req.query
+    const playerX = parseInt(x)
+    const playerZ = parseInt(z)
+
+    // Player region
+    const playerChunkX = Math.floor(playerX / 16)
+    const playerChunkZ = Math.floor(playerZ / 16)
+    const playerRegionX = Math.floor(playerChunkX / 34)
+    const playerRegionZ = Math.floor(playerChunkZ / 34)
+
+    const seedStr = process.env.MAP_SEED || '1234567890'
+    const worldSeed = BigInt(seedStr)
+    const salt = 10387312n // Minecraft 1.18+ village salt
+
+    const villages = []
+
+    // Search 5x5 regions around player
+    for (let rx = playerRegionX - 2; rx <= playerRegionX + 2; rx++) {
+        for (let rz = playerRegionZ - 2; rz <= playerRegionZ + 2; rz++) {
+            // Region seed calculation
+            const regionSeed = BigInt(rx) * 341873128712n + BigInt(rz) * 132897987541n + worldSeed + salt
+
+            // Mask to 48 bits for Java Random
+            const randSeed = Number(regionSeed & 0xFFFFFFFFFFFFn)
+            const rng = new Random(randSeed)
+
+            // Calculate chunk offset in region
+            const offsetX = rng.nextInt(26) // 34 - 8
+            const offsetZ = rng.nextInt(26) // 34 - 8
+
+            // Global chunk coords
+            const chunkX = rx * 34 + offsetX
+            const chunkZ = rz * 34 + offsetZ
+
+            // Center block of chunk
+            const blockX = chunkX * 16 + 8
+            const blockZ = chunkZ * 16 + 8
+
+            // Distance to player
+            const dx = blockX - playerX
+            const dz = blockZ - playerZ
+            const distance = Math.round(Math.sqrt(dx * dx + dz * dz))
+
+            villages.push({ x: blockX, z: blockZ, distance })
+        }
+    }
+
+    // Sort by distance and return top 10
+    villages.sort((a, b) => a.distance - b.distance)
+
+    res.json(villages.slice(0, 10))
 })
 
 export default router

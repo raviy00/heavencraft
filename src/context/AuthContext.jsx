@@ -1,23 +1,19 @@
 import { createContext, useContext, useState, useEffect } from 'react'
+import { authApi } from '../api'
 
 const AuthContext = createContext(null)
 
-const API_URL = 'http://localhost:3001/api'
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
 
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(null)
     const [loading, setLoading] = useState(true)
 
-    // On mount, check for stored token and validate it
+    // On mount, check for stored token and validate it with the server
     useEffect(() => {
         async function checkAuth() {
             const token = localStorage.getItem('hc_token')
             if (!token) {
-                // Fall back to legacy mock user
-                try {
-                    const stored = localStorage.getItem('hc_user')
-                    if (stored) setUser(JSON.parse(stored))
-                } catch { /* ignore */ }
                 setLoading(false)
                 return
             }
@@ -30,30 +26,44 @@ export function AuthProvider({ children }) {
                     const data = await res.json()
                     setUser(data.user)
                 } else {
-                    // Token expired / invalid
+                    // Token expired or invalid — clear it
                     localStorage.removeItem('hc_token')
                 }
-            } catch (err) {
-                console.warn('Auth check failed, using offline mode')
-                // If server is down, try legacy user
-                try {
-                    const stored = localStorage.getItem('hc_user')
-                    if (stored) setUser(JSON.parse(stored))
-                } catch { /* ignore */ }
+            } catch {
+                // Server unreachable — do not fall back to localStorage user;
+                // treat as unauthenticated to avoid security bypass
+                console.warn('Auth check failed: server unreachable')
             }
             setLoading(false)
         }
         checkAuth()
     }, [])
 
-    // Mock login (for username/password form — no real backend)
-    const login = (username) => {
-        const userData = { username, loginAt: new Date().toISOString() }
-        localStorage.setItem('hc_user', JSON.stringify(userData))
-        setUser(userData)
+    // Login with local username/password
+    const login = async (username, password) => {
+        try {
+            const res = await authApi.login({ username, password })
+            localStorage.setItem('hc_token', res.token)
+            setUser(res.user)
+            return true
+        } catch (err) {
+            console.error('Login failed:', err)
+            throw new Error(err.message || 'Login failed')
+        }
     }
 
-    // Real login via Discord OAuth token
+    const register = async (username, email, password) => {
+        try {
+            await authApi.register({ username, email, password })
+            // Do not log in automatically, user will go to login page
+            return true
+        } catch (err) {
+            console.error('Registration failed:', err)
+            throw new Error(err.message || 'Registration failed')
+        }
+    }
+
+    // Login via OAuth token (Discord / Google / Microsoft callback)
     const loginWithToken = async (token) => {
         localStorage.setItem('hc_token', token)
         try {
@@ -62,27 +72,18 @@ export function AuthProvider({ children }) {
             })
             if (res.ok) {
                 const data = await res.json()
-                // Also store as legacy user for dashboard compatibility
-                localStorage.setItem('hc_user', JSON.stringify({
-                    username: data.user.globalName || data.user.username,
-                    discordId: data.user.discordId,
-                    avatar: data.user.avatarUrl,
-                    email: data.user.email,
-                    role: data.user.role,
-                    loginAt: new Date().toISOString(),
-                }))
                 setUser(data.user)
                 return true
             }
         } catch (err) {
             console.error('Token login failed:', err)
         }
+        localStorage.removeItem('hc_token')
         return false
     }
 
     const logout = () => {
         localStorage.removeItem('hc_token')
-        localStorage.removeItem('hc_user')
         setUser(null)
     }
 
@@ -96,15 +97,22 @@ export function AuthProvider({ children }) {
         window.location.href = `${API_URL}/auth/google`
     }
 
+    // Microsoft OAuth redirect
+    const loginWithMicrosoft = () => {
+        window.location.href = `${API_URL}/auth/microsoft`
+    }
+
     return (
         <AuthContext.Provider value={{
             user,
             loading,
             login,
+            register,
+            logout,
             loginWithToken,
             loginWithDiscord,
             loginWithGoogle,
-            logout,
+            loginWithMicrosoft,
         }}>
             {children}
         </AuthContext.Provider>

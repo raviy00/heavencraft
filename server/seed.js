@@ -13,78 +13,7 @@ import ServerConfig from './models/ServerConfig.js'
 dns.setDefaultResultOrder('ipv4first')
 dns.setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1'])
 
-const players = [
-    {
-        username: 'SkyBuilder99',
-        uuid: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-        kills: 142, deaths: 38, playtime: 312, blocksMined: 98450,
-        lastDeath: { x: -304, y: 64, z: 1201, cause: 'Creeper' },
-        joinDate: new Date('2024-01-15'), lastSeen: new Date('2026-03-01'),
-    },
-    {
-        username: 'CreeperKing',
-        uuid: 'b2c3d4e5-f6a7-8901-bcde-f12345678901',
-        kills: 98, deaths: 74, playtime: 210, blocksMined: 62100,
-        lastDeath: { x: 512, y: 11, z: -88, cause: 'Lava' },
-        joinDate: new Date('2024-02-03'), lastSeen: new Date('2026-02-28'),
-    },
-    {
-        username: 'DiamondQueen',
-        uuid: 'c3d4e5f6-a7b8-9012-cdef-123456789012',
-        kills: 201, deaths: 22, playtime: 489, blocksMined: 185900,
-        lastDeath: { x: 0, y: 120, z: 0, cause: 'Void' },
-        joinDate: new Date('2023-12-01'), lastSeen: new Date('2026-03-01'),
-    },
-    {
-        username: 'NetherWalker',
-        uuid: 'd4e5f6a7-b8c9-0123-defa-234567890123',
-        kills: 176, deaths: 55, playtime: 378, blocksMined: 134200,
-        lastDeath: { x: 1089, y: 30, z: -445, cause: 'Blaze' },
-        joinDate: new Date('2024-01-28'), lastSeen: new Date('2026-02-25'),
-    },
-    {
-        username: 'SteveCraft',
-        uuid: 'e5f6a7b8-c9d0-1234-efab-345678901234',
-        kills: 54, deaths: 101, playtime: 145, blocksMined: 41800,
-        lastDeath: { x: -789, y: 64, z: 321, cause: 'Player' },
-        joinDate: new Date('2024-03-10'), lastSeen: new Date('2026-02-20'),
-    },
-    {
-        username: 'ZombieSlayer',
-        uuid: 'f6a7b8c9-d0e1-2345-fabc-456789012345',
-        kills: 320, deaths: 18, playtime: 601, blocksMined: 220000,
-        lastDeath: { x: 44, y: 64, z: -1204, cause: 'Wither' },
-        joinDate: new Date('2023-11-20'), lastSeen: new Date('2026-03-01'),
-    },
-    {
-        username: 'EnderHunter',
-        uuid: 'a7b8c9d0-e1f2-3456-abcd-567890123456',
-        kills: 88, deaths: 46, playtime: 198, blocksMined: 78400,
-        lastDeath: { x: 200, y: 0, z: 200, cause: 'End Void' },
-        joinDate: new Date('2024-04-05'), lastSeen: new Date('2026-02-15'),
-    },
-    {
-        username: 'RedstoneGenius',
-        uuid: 'b8c9d0e1-f2a3-4567-bcde-678901234567',
-        kills: 12, deaths: 8, playtime: 520, blocksMined: 310000,
-        lastDeath: { x: -55, y: 64, z: 77, cause: 'Own Trap' },
-        joinDate: new Date('2023-10-14'), lastSeen: new Date('2026-03-01'),
-    },
-    {
-        username: 'IronGolemBoss',
-        uuid: 'c9d0e1f2-a3b4-5678-cdef-789012345678',
-        kills: 249, deaths: 31, playtime: 430, blocksMined: 156000,
-        lastDeath: { x: 900, y: 80, z: 1500, cause: 'Ender Dragon' },
-        joinDate: new Date('2024-01-01'), lastSeen: new Date('2026-03-01'),
-    },
-    {
-        username: 'CaveExplorer',
-        uuid: 'd0e1f2a3-b4c5-6789-defa-890123456789',
-        kills: 67, deaths: 89, playtime: 265, blocksMined: 99200,
-        lastDeath: { x: -1100, y: 12, z: 444, cause: 'Cave Spider' },
-        joinDate: new Date('2024-02-14'), lastSeen: new Date('2026-02-22'),
-    },
-]
+const players = []
 
 const mods = [
     {

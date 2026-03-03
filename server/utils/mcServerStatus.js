@@ -35,66 +35,31 @@ export async function getServerStatus(ip, port = 25565) {
         }
     }
 
+    // Removed mcstatus.io as requested
+
+    // Method 2: Fallback to minecraft-server-util (Node.js third party library)
     try {
-        // Method 2: Use third-party API to check basic server status and connected players
-        // This emulates the website's functionality as requested and avoids local firewall issues
-        const response = await fetch(`https://api.mcstatus.io/v2/status/java/${ip}`);
-        if (!response.ok) {
-            throw new Error(`Failed to fetch from mcstatus API: ${response.statusText}`);
-        }
-
-        const data = await response.json();
-
-        if (data.online) {
-            return {
-                status: 'online',
-                onlinePlayers: data.players?.online || 0,
-                maxPlayers: data.players?.max || 20,
-                // List of currently connected players
-                playersList: data.players?.list?.map(p => ({
-                    uuid: p.uuid,
-                    username: p.name_raw || p.name_clean
-                })) || [],
-                motd: data.motd?.clean || '',
-                version: data.version?.name_raw || data.version?.name_clean || ''
-            };
-        } else {
-            return {
-                status: 'offline',
-                onlinePlayers: 0,
-                maxPlayers: 20,
-                playersList: [],
-                motd: '',
-                version: ''
-            };
-        }
-    } catch (err) {
-        console.warn(`[MCServerStatus] Third-party API failed, falling back to minecraft-server-util: ${err.message}`);
-
-        // Method 3: Fallback to minecraft-server-util (Node.js third party library)
-        try {
-            const result = await util.status(ip, port, { timeout: 3000, enableSRV: true });
-            return {
-                status: 'online',
-                onlinePlayers: result.players.online,
-                maxPlayers: result.players.max,
-                playersList: result.players.sample?.map(p => ({
-                    uuid: p.id,
-                    username: p.name
-                })) || [],
-                motd: typeof result.motd?.clean === 'string' ? result.motd.clean : '',
-                version: result.version?.name || ''
-            };
-        } catch (fallbackErr) {
-            console.warn(`[MCServerStatus] Direct ping failed: ${fallbackErr.message}`);
-            return {
-                status: 'offline',
-                onlinePlayers: 0,
-                maxPlayers: 20,
-                playersList: [],
-                motd: '',
-                version: ''
-            };
-        }
+        const result = await util.status(ip, port, { timeout: 3000, enableSRV: true });
+        return {
+            status: 'online',
+            onlinePlayers: result.players.online,
+            maxPlayers: result.players.max,
+            playersList: result.players.sample?.map(p => ({
+                uuid: p.id,
+                username: p.name
+            })) || [],
+            motd: typeof result.motd?.clean === 'string' ? result.motd.clean : '',
+            version: result.version?.name || ''
+        };
+    } catch (fallbackErr) {
+        console.warn(`[MCServerStatus] Direct ping failed: ${fallbackErr.message}`);
+        return {
+            status: 'offline',
+            onlinePlayers: 0,
+            maxPlayers: 20,
+            playersList: [],
+            motd: '',
+            version: ''
+        };
     }
 }

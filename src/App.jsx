@@ -12,7 +12,6 @@ import AuthCallbackPage from './pages/AuthCallbackPage'
 import DashboardLayout from './layouts/DashboardLayout'
 import DashboardPage from './pages/DashboardPage'
 import ServerInfoPage from './pages/ServerInfoPage'
-import MapPage from './pages/MapPage'
 import ModsPage from './pages/ModsPage'
 import StatsPage from './pages/StatsPage'
 import LeaderboardPage from './pages/LeaderboardPage'
@@ -92,7 +91,6 @@ function AppRoutes() {
       >
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="server-info" element={<ServerInfoPage />} />
-        <Route path="map" element={<MapPage />} />
         <Route path="mods" element={<ModsPage />} />
         <Route path="stats" element={<StatsPage />} />
         <Route path="leaderboard" element={<LeaderboardPage />} />

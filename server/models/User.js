@@ -4,7 +4,7 @@ const userSchema = new mongoose.Schema({
     // Auth provider
     authProvider: {
         type: String,
-        enum: ['discord', 'google', 'local'],
+        enum: ['discord', 'google', 'local', 'microsoft'],
         default: 'discord',
     },
 
@@ -28,6 +28,18 @@ const userSchema = new mongoose.Schema({
         default: null,
     },
 
+    // Microsoft OAuth fields
+    microsoftId: {
+        type: String,
+        default: null,
+        sparse: true,
+        index: true,
+    },
+    microsoftAvatar: {
+        type: String,
+        default: null,
+    },
+
     // Shared profile fields
     username: {
         type: String,
@@ -40,6 +52,10 @@ const userSchema = new mongoose.Schema({
     email: {
         type: String,
         default: null,
+    },
+    password: {
+        type: String,
+        default: null, // used for 'local' auth
     },
     avatar: {
         type: String,
@@ -81,6 +97,10 @@ userSchema.virtual('avatarUrl').get(function () {
     // Google users
     if (this.authProvider === 'google' && this.googleAvatar) {
         return this.googleAvatar
+    }
+    // Microsoft users
+    if (this.authProvider === 'microsoft' && this.microsoftAvatar) {
+        return this.microsoftAvatar
     }
     // Discord users
     if (this.avatar && this.discordId) {

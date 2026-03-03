@@ -1,7 +1,8 @@
 import { useAuth } from '../context/AuthContext'
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { serverApi, statsApi, playerApi, activityApi } from '../api'
+import { statsApi, playerApi, activityApi } from '../api'
+import { useServerStatus } from '../layouts/DashboardLayout'
 
 function StatCard({ icon, label, value, sub, accent }) {
     return (
@@ -40,7 +41,9 @@ export default function DashboardPage() {
     const { user } = useAuth()
     const [loading, setLoading] = useState(true)
 
-    const [serverInfo, setServerInfo] = useState({ status: 'offline', onlinePlayers: 0, maxPlayers: 20 })
+    // ── Use shared server status from DashboardLayout context (same as top-bar pill) ──
+    const serverInfo = useServerStatus()
+
     const [networkStats, setNetworkStats] = useState({ totalKills: 0, totalDeaths: 0, totalPlaytime: 0, totalBlocksMined: 0 })
     const [myStats, setMyStats] = useState(null)
     const [recentActivity, setRecentActivity] = useState([])
@@ -49,16 +52,13 @@ export default function DashboardPage() {
         async function loadData() {
             setLoading(true)
             try {
-                // Determine the correct username to query
                 const queryUsername = user?.minecraftUsername || user?.globalName || user?.username
 
-                const [serverRes, statsRes, activityRes] = await Promise.all([
-                    serverApi.status().catch(() => ({ status: 'offline', onlinePlayers: 0, maxPlayers: 20 })),
+                const [statsRes, activityRes] = await Promise.all([
                     statsApi.network().catch(() => ({ totalKills: 0, totalDeaths: 0, totalPlaytime: 0, totalBlocksMined: 0 })),
                     activityApi.list(10).catch(() => []),
                 ])
 
-                setServerInfo(serverRes)
                 setNetworkStats(statsRes)
                 setRecentActivity(activityRes)
 
@@ -76,8 +76,8 @@ export default function DashboardPage() {
     }, [user])
 
     const quickLinks = [
-        { to: '/server-info', label: 'Start Server', icon: 'power_settings_new', color: '#22c55e' },
-        { to: '/map', label: 'View Map', icon: 'map', color: '#258cf4' },
+        { to: '/server-info', label: 'Manage Server', icon: 'power_settings_new', color: '#22c55e' },
+        { to: '/stats', label: 'Player Stats', icon: 'bar_chart', color: '#258cf4' },
         { to: '/mods', label: 'Download Mods', icon: 'extension', color: '#8b5cf6' },
         { to: '/leaderboard', label: 'Leaderboard', icon: 'leaderboard', color: '#ffb800' },
     ]
@@ -104,23 +104,23 @@ export default function DashboardPage() {
                             ? 'linear-gradient(135deg, rgba(234,179,8,0.12) 0%, rgba(15,25,38,0.8) 100%)'
                             : 'linear-gradient(135deg, rgba(239,68,68,0.12) 0%, rgba(15,25,38,0.8) 100%)',
                     border: `1px solid ${serverInfo.status === 'online' ? 'rgba(34,197,94,0.3)'
-                            : serverInfo.status === 'starting' ? 'rgba(234,179,8,0.3)'
-                                : 'rgba(239,68,68,0.3)'
+                        : serverInfo.status === 'starting' ? 'rgba(234,179,8,0.3)'
+                            : 'rgba(239,68,68,0.3)'
                         }`,
                 }}
             >
                 <div className="flex items-center gap-3 flex-1">
                     <div
                         className={`w-3 h-3 rounded-full flex-shrink-0 ${serverInfo.status === 'online' ? 'animate-pulse' :
-                                serverInfo.status === 'starting' ? 'animate-bounce' : ''
+                            serverInfo.status === 'starting' ? 'animate-bounce' : ''
                             }`}
                         style={{
                             background: serverInfo.status === 'online' ? '#22c55e'
                                 : serverInfo.status === 'starting' ? '#eab308'
                                     : '#ef4444',
                             boxShadow: `0 0 10px ${serverInfo.status === 'online' ? '#22c55e'
-                                    : serverInfo.status === 'starting' ? '#eab308'
-                                        : '#ef4444'
+                                : serverInfo.status === 'starting' ? '#eab308'
+                                    : '#ef4444'
                                 }`,
                         }}
                     />

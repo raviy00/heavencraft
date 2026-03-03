@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { mapApi, activityApi } from '../api'
+import { mapApi } from '../api'
 
 const CHUNK = 8 // pixels per chunk at zoom=1
 
@@ -12,20 +12,14 @@ export default function MapPage() {
     const [lastUpdate, setLastUpdate] = useState(new Date())
 
     const [mapData, setMapData] = useState(null)
-    const [pois, setPois] = useState([])
-    const [deathMarks, setDeathMarks] = useState([])
     const [loading, setLoading] = useState(true)
+
+    const [targetLoc, setTargetLoc] = useState({ x: 0, z: 0 })
 
     const loadData = useCallback(async () => {
         try {
-            // Fetch map chunks and POIs
-            const [chunkRes, poiRes, activityRes] = await Promise.all([
-                // Fetch a good chunk of the map around 0,0
-                mapApi.chunks(-40, 40, -30, 30),
-                mapApi.pois(),
-                // Get recent deaths for map markers
-                activityApi.list(100)
-            ])
+            // Fetch map chunks 
+            const chunkRes = await mapApi.chunks(targetLoc.x, targetLoc.z, 30)
 
             // Reconstruct 2D array for map from chunk data
             const chunksList = chunkRes.chunks || chunkRes || []
@@ -53,21 +47,13 @@ export default function MapPage() {
                 ROWS: rows
             })
 
-            setPois(poiRes)
-
-            // Extract recent death coordinates
-            const deaths = activityRes
-                .filter(a => a.type === 'death' && a.x !== undefined && a.z !== undefined)
-                .slice(0, 10) // Show last 10 deaths max
-
-            setDeathMarks(deaths)
             setLastUpdate(new Date())
         } catch (err) {
             console.error('Failed to load map data:', err)
         } finally {
             setLoading(false)
         }
-    }, [])
+    }, [targetLoc])
 
     useEffect(() => {
         loadData()
@@ -84,12 +70,7 @@ export default function MapPage() {
 
         const cs = Math.round(CHUNK * zoom)
 
-        // Center of the fetched map
-        const centerXOffset = (COLS * cs) / 2
-        const centerZOffset = (ROWS * cs) / 2
-
         // Offset relative to actual 0,0 making sure the world origin is at the center of pan
-        // The origin 0,0 is at index (-minX), (-minZ)
         const originX = (-minX) * cs
         const originZ = (-minZ) * cs
 
@@ -125,52 +106,6 @@ export default function MapPage() {
             }
         }
 
-        // Convert world coords to canvas coords
-        // Origin is at offsetX, offsetY
-        // 1 block = cs/16 pixels (since a chunk is 16x16 blocks)
-        const toCanvas = (wx, wz) => ({
-            x: offsetX + (wx / 16) * cs,
-            y: offsetY + (wz / 16) * cs,
-        })
-
-        // Death marks
-        for (const d of deathMarks) {
-            const { x, y } = toCanvas(d.x, d.z)
-            ctx.save()
-            ctx.font = `${Math.max(12, 14 * zoom)}px serif`
-            ctx.textAlign = 'center'
-            ctx.textBaseline = 'middle'
-            ctx.fillText('💀', x, y)
-            ctx.restore()
-        }
-
-        // POI markers
-        for (const p of pois) {
-            const { x, y } = toCanvas(p.x, p.z)
-            const r = Math.max(8, 10 * zoom)
-            ctx.beginPath()
-            ctx.arc(x, y, r, 0, Math.PI * 2)
-            ctx.fillStyle = `${p.color}cc`
-            ctx.fill()
-            ctx.strokeStyle = 'white'
-            ctx.lineWidth = 1.5
-            ctx.stroke()
-
-            ctx.font = `${Math.max(10, 13 * zoom)}px serif`
-            ctx.textAlign = 'center'
-            ctx.textBaseline = 'middle'
-            ctx.fillText(p.icon, x, y)
-
-            if (zoom >= 1.2) {
-                ctx.font = `bold ${Math.max(9, 11 * zoom)}px "Space Grotesk", sans-serif`
-                ctx.fillStyle = 'white'
-                ctx.strokeStyle = 'rgba(0,0,0,0.8)'
-                ctx.lineWidth = 3
-                ctx.strokeText(p.label, x, y + r + 8 * zoom)
-                ctx.fillText(p.label, x, y + r + 8 * zoom)
-            }
-        }
-
         // Compass
         ctx.save()
         ctx.translate(cw - 50, 50)
@@ -191,7 +126,7 @@ export default function MapPage() {
         ctx.font = '11px monospace'
         ctx.fillStyle = '#94a3b8'
         ctx.fillText(`Zoom: ${zoom.toFixed(1)}x`, 16, ch - 16)
-    }, [zoom, pan, mapData, pois, deathMarks])
+    }, [zoom, pan, mapData])
 
     useEffect(() => { draw() }, [draw])
 
@@ -223,11 +158,15 @@ export default function MapPage() {
             {/* Controls bar */}
             <div className="flex items-center justify-between flex-shrink-0 flex-wrap gap-3">
                 <div>
-                    <h1 className="text-white font-bold text-lg">World Map</h1>
+                    <h1 className="text-white font-bold text-lg flex items-center gap-2">
+                        <span className="material-symbols-outlined text-amber-500">explore</span>
+                        World Map
+                    </h1>
                     <p style={{ color: '#475569', fontSize: '0.8rem' }}>
                         Last updated: {lastUpdate.toLocaleTimeString()} · Auto-refreshes every 30s
                     </p>
                 </div>
+
                 <div className="flex items-center gap-2">
                     <button
                         onClick={() => setZoom((z) => Math.max(0.5, z - 0.25))}
@@ -250,7 +189,7 @@ export default function MapPage() {
                         <span className="material-symbols-outlined" style={{ fontSize: '1.1rem' }}>add</span>
                     </button>
                     <button
-                        onClick={() => { setPan({ x: 0, y: 0 }); setZoom(1) }}
+                        onClick={() => { setPan({ x: 0, y: 0 }); setZoom(1); setTargetLoc({ x: 0, z: 0 }); }}
                         className="px-3 py-1.5 rounded-lg text-sm font-medium text-white transition-colors flex items-center gap-1 hover:bg-blue-600 hover:text-white"
                         style={{ background: 'rgba(37,140,244,0.2)', border: '1px solid rgba(37,140,244,0.3)', color: '#258cf4' }}
                     >
@@ -284,41 +223,6 @@ export default function MapPage() {
                     onMouseLeave={onMouseUp}
                     style={{ display: 'block' }}
                 />
-
-                {/* Legend */}
-                <div
-                    className="absolute top-3 left-3 rounded-lg p-3 text-xs space-y-1"
-                    style={{ background: 'rgba(10,18,28,0.85)', border: '1px solid rgba(51,65,85,0.4)' }}
-                >
-                    <p className="font-bold text-white mb-2">Legend</p>
-                    {[
-                        { icon: '🏠', label: 'Structure' },
-                        { icon: '💀', label: 'Death Point' },
-                    ].map(({ icon, label }) => (
-                        <div key={label} className="flex items-center gap-2" style={{ color: '#94a3b8' }}>
-                            <span>{icon}</span> {label}
-                        </div>
-                    ))}
-                    <p className="pt-1" style={{ color: '#475569' }}>Scroll to zoom · Drag to pan</p>
-                </div>
-            </div>
-
-            {/* POI list */}
-            <div className="flex-shrink-0 flex gap-2 overflow-x-auto pb-1 flex-wrap">
-                {pois.map((p) => (
-                    <div
-                        key={p.label || Math.random()}
-                        className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap"
-                        style={{
-                            background: `${p.color}15`,
-                            border: `1px solid ${p.color}35`,
-                            color: p.color,
-                        }}
-                    >
-                        <span>{p.icon}</span>
-                        {p.label}
-                    </div>
-                ))}
             </div>
         </div>
     )

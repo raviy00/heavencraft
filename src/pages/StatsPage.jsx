@@ -50,7 +50,7 @@ export default function StatsPage() {
     }
 
     const filtered = players
-        .filter((p) => p.username.toLowerCase().includes(search.toLowerCase()))
+        .filter((p) => (p.username || '').toLowerCase().includes(search.toLowerCase()))
         .sort((a, b) => {
             const va = sortKey === 'kdr' ? a.kdr : a[sortKey]
             const vb = sortKey === 'kdr' ? b.kdr : b[sortKey]
@@ -101,12 +101,12 @@ export default function StatsPage() {
                                 {sp.skin ? (
                                     <img src={sp.skin} alt={sp.username} className="w-full h-full rounded-xl object-cover" />
                                 ) : (
-                                    sp.username.substring(0, 2).toUpperCase()
+                                    (sp.username || 'Un').substring(0, 2).toUpperCase()
                                 )}
                             </div>
                             <div>
                                 <p className="text-white font-bold text-xl flex items-center gap-2">
-                                    {sp.username}
+                                    {sp.username || 'Unknown'}
                                     {sp.isOnline && <span className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_#22c55e]"></span>}
                                 </p>
                                 <p style={{ color: '#64748b', fontSize: '0.8rem' }}>
@@ -266,9 +266,9 @@ export default function StatsPage() {
                                                     className="w-7 h-7 rounded flex items-center justify-center text-xs font-bold flex-shrink-0"
                                                     style={{ background: 'linear-gradient(135deg,#258cf4,#1a6bc4)', color: 'white' }}
                                                 >
-                                                    {p.username.slice(0, 2).toUpperCase()}
+                                                    {(p.username || 'Un').slice(0, 2).toUpperCase()}
                                                 </div>
-                                                <span className="text-white font-medium">{p.username}</span>
+                                                <span className="text-white font-medium">{p.username || 'Unknown'}</span>
                                             </div>
                                         </td>
                                         <td className="px-4 py-3">

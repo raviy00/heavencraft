@@ -20,7 +20,23 @@ router.get('/info', async (req, res) => {
 
         // Decide status (if DB says starting, we override live ping until it finishes)
         let finalStatus = config.status
-        if (config.status !== 'starting') {
+        if (config.status === 'starting') {
+            if (liveInfo.status === 'online') {
+                finalStatus = 'online'
+                config.status = 'online'
+                await config.save()
+            } else {
+                // If it's been starting for over 10 minutes, reset to offline
+                const elapsed = Date.now() - new Date(config.lastStartedAt || Date.now()).getTime()
+                if (elapsed > 10 * 60 * 1000) {
+                    finalStatus = 'offline'
+                    config.status = 'offline'
+                    await config.save()
+                }
+            }
+        }
+
+        if (finalStatus !== 'starting') {
             finalStatus = liveInfo.status;
             // Auto update DB status to reflect real world offline/online state transitions
             if (config.status !== finalStatus) {
@@ -60,8 +76,28 @@ router.get('/status', async (req, res) => {
         const liveInfo = await getServerStatus(config.ip, config.port)
 
         let finalStatus = config.status
-        if (config.status !== 'starting') {
+        if (config.status === 'starting') {
+            if (liveInfo.status === 'online') {
+                finalStatus = 'online'
+                config.status = 'online'
+                await config.save()
+            } else {
+                const elapsed = Date.now() - new Date(config.lastStartedAt || Date.now()).getTime()
+                if (elapsed > 10 * 60 * 1000) {
+                    finalStatus = 'offline'
+                    config.status = 'offline'
+                    await config.save()
+                }
+            }
+        }
+
+        if (finalStatus !== 'starting') {
             finalStatus = liveInfo.status;
+            if (config.status !== finalStatus) {
+                config.status = finalStatus
+                if (finalStatus === 'offline') config.uptime = '0h 0m'
+                await config.save()
+            }
         }
 
         res.json({
@@ -106,17 +142,9 @@ router.post('/start', async (req, res) => {
             icon: 'power_settings_new',
         })
 
-        // Simulate startup delay (3 seconds)
-        setTimeout(async () => {
-            try {
-                config.status = 'online'
-                config.startedAt = new Date()
-                config.uptime = '0h 0m'
-                await config.save()
-            } catch (e) {
-                console.error('Failed to set server online:', e)
-            }
-        }, 3000)
+        // We rely on the /info API polling mcstatus or our custom checks to detect when it comes fully online.
+
+
 
         res.json({ message: 'Server starting…', status: 'starting' })
     } catch (err) {

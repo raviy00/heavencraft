@@ -1,11 +1,15 @@
 import { Router } from 'express'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'
+import bcrypt from 'bcrypt'
 
 const router = Router()
 
 const DISCORD_API = 'https://discord.com/api/v10'
 const GOOGLE_API = 'https://www.googleapis.com/oauth2/v2'
+const MICROSOFT_API_AUTH = 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize'
+const MICROSOFT_API_TOKEN = 'https://login.microsoftonline.com/common/oauth2/v2.0/token'
+const MICROSOFT_GRAPH_ME = 'https://graph.microsoft.com/v1.0/me'
 const {
     DISCORD_CLIENT_ID,
     DISCORD_CLIENT_SECRET,
@@ -13,6 +17,9 @@ const {
     GOOGLE_CLIENT_ID,
     GOOGLE_CLIENT_SECRET,
     GOOGLE_REDIRECT_URI,
+    MICROSOFT_CLIENT_ID,
+    MICROSOFT_CLIENT_SECRET,
+    MICROSOFT_REDIRECT_URI,
     FRONTEND_URL,
     JWT_SECRET,
 } = process.env
@@ -47,7 +54,7 @@ router.get('/discord', (req, res) => {
         response_type: 'code',
         scope: 'identify email',
     })
-    res.redirect(`${DISCORD_API}/oauth2/authorize?${params}`)
+    res.redirect(`https://discord.com/oauth2/authorize?${params}`)
 })
 
 router.get('/discord/callback', async (req, res) => {
@@ -142,8 +149,7 @@ router.get('/google', (req, res) => {
         redirect_uri: GOOGLE_REDIRECT_URI,
         response_type: 'code',
         scope: 'openid email profile',
-        access_type: 'offline',
-        prompt: 'consent',
+        access_type: 'online',
     })
     res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params}`)
 })
@@ -226,6 +232,170 @@ router.get('/google/callback', async (req, res) => {
     } catch (err) {
         console.error('Google OAuth error:', err)
         res.redirect(`${FRONTEND_URL}/?error=server_error`)
+    }
+})
+
+// ═══════════════════════════════════════════════
+//  MICROSOFT OAuth
+// ═══════════════════════════════════════════════
+
+router.get('/microsoft', (req, res) => {
+    const params = new URLSearchParams({
+        client_id: MICROSOFT_CLIENT_ID,
+        redirect_uri: MICROSOFT_REDIRECT_URI,
+        response_type: 'code',
+        scope: 'User.Read openid profile email',
+    })
+    res.redirect(`${MICROSOFT_API_AUTH}?${params}`)
+})
+
+router.get('/microsoft/callback', async (req, res) => {
+    const { code } = req.query
+    if (!code) {
+        return res.redirect(`${FRONTEND_URL}/?error=missing_code`)
+    }
+
+    try {
+        const tokenRes = await fetch(MICROSOFT_API_TOKEN, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+                client_id: MICROSOFT_CLIENT_ID,
+                client_secret: MICROSOFT_CLIENT_SECRET,
+                grant_type: 'authorization_code',
+                code,
+                redirect_uri: MICROSOFT_REDIRECT_URI,
+            }),
+        })
+
+        if (!tokenRes.ok) return res.redirect(`${FRONTEND_URL}/?error=token_exchange_failed`)
+
+        const tokenData = await tokenRes.json()
+
+        const userRes = await fetch(MICROSOFT_GRAPH_ME, {
+            headers: { Authorization: `Bearer ${tokenData.access_token}` },
+        })
+
+        if (!userRes.ok) return res.redirect(`${FRONTEND_URL}/?error=profile_fetch_failed`)
+
+        const microsoftUser = await userRes.json()
+
+        let dbUser = null
+        const User = await getUser()
+
+        if (User) {
+            const email = microsoftUser.mail || microsoftUser.userPrincipalName || null
+            dbUser = await User.findOneAndUpdate(
+                { microsoftId: microsoftUser.id },
+                {
+                    microsoftId: microsoftUser.id,
+                    username: microsoftUser.displayName || email?.split('@')[0] || 'Player',
+                    email: email,
+                    globalName: microsoftUser.displayName || null,
+                    authProvider: 'microsoft',
+                    lastLogin: new Date(),
+                },
+                { upsert: true, new: true, setDefaultsOnInsert: true }
+            )
+        }
+
+        const jwtPayload = {
+            userId: dbUser?._id?.toString() || microsoftUser.id,
+            microsoftId: microsoftUser.id,
+            username: microsoftUser.displayName || 'Player',
+            email: microsoftUser.mail || microsoftUser.userPrincipalName,
+            role: dbUser?.role || 'player',
+            authProvider: 'microsoft',
+        }
+
+        const token = jwt.sign(jwtPayload, JWT_SECRET, { expiresIn: '7d' })
+        res.redirect(`${FRONTEND_URL}/auth/callback?token=${token}`)
+    } catch (err) {
+        console.error('Microsoft OAuth error:', err)
+        res.redirect(`${FRONTEND_URL}/?error=server_error`)
+    }
+})
+
+
+// ═══════════════════════════════════════════════
+//  LOCAL Auth (Username / Password)
+// ═══════════════════════════════════════════════
+
+router.post('/register', async (req, res) => {
+    try {
+        const { username, email, password } = req.body
+        if (!username || !email || !password) {
+            return res.status(400).json({ error: 'Username, email, and password are required' })
+        }
+
+        const User = await getUser()
+        if (!User) return res.status(500).json({ error: 'Database error' })
+
+        // Check if user already exists
+        const existingError = await User.findOne({
+            $or: [{ email }, { username }]
+        }).collation({ locale: 'en', strength: 2 })
+
+        if (existingError) {
+            return res.status(409).json({ error: 'A user with that email or username already exists' })
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10)
+
+        const newUser = new User({
+            username,
+            email,
+            password: hashedPassword,
+            authProvider: 'local',
+        })
+
+        await newUser.save()
+
+        res.json({ message: 'Registration successful' })
+
+    } catch (err) {
+        console.error('Local Register error:', err)
+        res.status(500).json({ error: 'Internal server error: ' + err.message })
+    }
+})
+
+router.post('/login', async (req, res) => {
+    try {
+        const { username, password } = req.body
+        if (!username || !password) {
+            return res.status(400).json({ error: 'Username and password are required' })
+        }
+
+        const User = await getUser()
+        if (!User) return res.status(500).json({ error: 'Database error' })
+
+        // Find user by username
+        const user = await User.findOne({ username }).collation({ locale: 'en', strength: 2 })
+
+        if (!user || user.authProvider !== 'local' || !user.password) {
+            return res.status(401).json({ error: 'Invalid username or password' })
+        }
+
+        const match = await bcrypt.compare(password, user.password)
+        if (!match) {
+            return res.status(401).json({ error: 'Invalid username or password' })
+        }
+
+        // Create JWT
+        const jwtPayload = {
+            userId: user._id.toString(),
+            username: user.username,
+            email: user.email,
+            role: user.role,
+            authProvider: 'local',
+        }
+
+        const token = jwt.sign(jwtPayload, JWT_SECRET, { expiresIn: '7d' })
+        res.json({ token, user })
+
+    } catch (err) {
+        console.error('Local Login error:', err)
+        res.status(500).json({ error: 'Internal server error' })
     }
 })
 

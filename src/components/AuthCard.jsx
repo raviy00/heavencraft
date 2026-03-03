@@ -124,13 +124,20 @@ function LoginPanel({ onSwitch }) {
         setForm(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }))
     }
 
-    const onSubmit = e => {
+    const onSubmit = async e => {
         e.preventDefault()
         setError('')
         if (!form.username.trim()) return setError('Enter your Minecraft username.')
         if (!form.password) return setError('Enter your password.')
+
         setLoading(true)
-        setTimeout(() => { login(form.username.trim()); setLoading(false) }, 1200)
+        try {
+            await login(form.username.trim(), form.password)
+            // Redirect happens automatically if AuthContext provides one or AuthModal handles it
+        } catch (err) {
+            setError(err.message || 'Invalid username or password')
+            setLoading(false)
+        }
     }
 
     return (
@@ -192,7 +199,7 @@ function LoginPanel({ onSwitch }) {
 
 // ─── Register Panel ───
 function RegisterPanel({ onSwitch }) {
-    const { loginWithDiscord, loginWithGoogle } = useAuth()
+    const { register, loginWithDiscord, loginWithGoogle } = useAuth()
     const [form, setForm] = useState({ username: '', email: '', password: '', confirm: '' })
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
@@ -211,16 +218,27 @@ function RegisterPanel({ onSwitch }) {
         return ''
     }
 
-    const onSubmit = e => {
+    const onSubmit = async e => {
         e.preventDefault()
         setError(''); setSuccess(false)
         const err = validate()
         if (err) return setError(err)
+
         setLoading(true)
-        setTimeout(() => {
-            setLoading(false); setSuccess(true)
+        try {
+            await register(form.username.trim(), form.email, form.password)
+            setSuccess(true)
             setForm({ username: '', email: '', password: '', confirm: '' })
-        }, 1400)
+
+            // Wait briefly before making them switch entirely, or let AuthContext handle auto-login if you prefer.
+            // Since user logic requested "must login using credentials", we'll flip them to login view.
+            setTimeout(() => {
+                onSwitch()
+            }, 1000)
+        } catch (err) {
+            setError(err.message || 'Failed to create account. Username/email may exist.')
+            setLoading(false)
+        }
     }
 
     return (

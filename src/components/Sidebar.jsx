@@ -5,7 +5,6 @@ import { useState } from 'react'
 const navItems = [
     { to: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
     { to: '/server-info', label: 'Server Info', icon: 'dns' },
-    { to: '/map', label: 'World Map', icon: 'map' },
     { to: '/mods', label: 'Mods', icon: 'extension' },
     { to: '/stats', label: 'Player Stats', icon: 'bar_chart' },
     { to: '/leaderboard', label: 'Leaderboard', icon: 'leaderboard' },
@@ -46,31 +45,43 @@ export default function Sidebar({ mobileOpen, onClose }) {
             >
                 {/* Logo */}
                 <div
-                    className="flex items-center gap-3 px-5 py-5"
-                    style={{ borderBottom: '1px solid rgba(51,65,85,0.3)' }}
+                    className="flex flex-col items-center justify-center gap-2 px-5 py-6"
+                    style={{ borderBottom: '1px solid rgba(51,65,85,0.3)', minHeight: '120px' }}
                 >
-                    <div
-                        className="p-2 rounded-lg shadow-lg flex-shrink-0"
-                        style={{ background: '#258cf4' }}
-                    >
-                        <span className="material-symbols-outlined text-white" style={{ fontSize: '1.4rem' }}>
-                            deployed_code
-                        </span>
+                    <img
+                        src="/logo.png"
+                        alt="Heavencraft"
+                        className="w-full max-w-[140px] drop-shadow-md object-contain"
+                        onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                            e.currentTarget.nextElementSibling.style.display = 'flex';
+                        }}
+                    />
+                    <div className="hidden items-center gap-3 w-full">
+                        <div
+                            className="p-2 rounded-lg shadow-lg flex-shrink-0"
+                            style={{ background: '#258cf4' }}
+                        >
+                            <span className="material-symbols-outlined text-white" style={{ fontSize: '1.4rem' }}>
+                                deployed_code
+                            </span>
+                        </div>
+                        <div>
+                            <h1 className="text-white font-bold tracking-tight uppercase text-base leading-none">
+                                Heavencraft
+                            </h1>
+                            <p style={{ color: '#64748b', fontSize: '0.65rem' }}>Server Network</p>
+                        </div>
                     </div>
-                    <div>
-                        <h1 className="text-white font-bold tracking-tight uppercase text-base leading-none">
-                            Heavencraft
-                        </h1>
-                        <p style={{ color: '#64748b', fontSize: '0.65rem' }}>Server Network</p>
-                    </div>
-                    {/* Mobile close */}
-                    <button
-                        className="ml-auto lg:hidden text-slate-400 hover:text-white"
-                        onClick={onClose}
-                    >
-                        <span className="material-symbols-outlined" style={{ fontSize: '1.2rem' }}>close</span>
-                    </button>
                 </div>
+
+                {/* Mobile close */}
+                <button
+                    className="absolute top-4 right-4 lg:hidden text-slate-400 hover:text-white z-50 bg-black/50 p-1 rounded-full"
+                    onClick={onClose}
+                >
+                    <span className="material-symbols-outlined" style={{ fontSize: '1.2rem' }}>close</span>
+                </button>
 
                 {/* Navigation */}
                 <nav className="flex-1 py-4 overflow-y-auto">

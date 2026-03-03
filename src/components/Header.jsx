@@ -25,11 +25,22 @@ export default function Header() {
             <header className="absolute top-0 w-full z-40 flex items-center justify-between px-6 lg:px-12 py-5 bg-gradient-to-b from-black/80 to-transparent">
 
                 {/* Left: Logo and Name */}
-                <Link to="/" className="flex items-center gap-3 decoration-transparent">
-                    <div className="flex items-center justify-center p-2 rounded-lg bg-primary shadow-[0_0_15px_rgba(37,140,244,0.5)]">
+                <Link to="/" className="flex items-center gap-3 decoration-transparent group">
+                    <img
+                        src="/logo.png"
+                        alt="Heavencraft"
+                        className="h-10 md:h-12 object-contain group-hover:scale-105 transition-transform duration-300"
+                        style={{ filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.3))' }}
+                        onError={(e) => {
+                            // Fallback to text icon if the image isn't saved yet
+                            e.currentTarget.style.display = 'none';
+                            e.currentTarget.nextElementSibling.style.display = 'flex';
+                        }}
+                    />
+                    <div className="hidden items-center justify-center p-2 rounded-lg bg-primary shadow-[0_0_15px_rgba(37,140,244,0.5)]">
                         <span className="material-symbols-outlined text-white" style={{ fontSize: '1.5rem' }}>deployed_code</span>
                     </div>
-                    <h1 className="text-white text-xl font-bold tracking-widest uppercase italic font-display">
+                    <h1 className="text-white text-2xl md:text-3xl font-bold tracking-widest uppercase italic font-display drop-shadow-md">
                         Heavencraft
                     </h1>
                 </Link>

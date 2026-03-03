@@ -19,7 +19,7 @@ export default function HomePage() {
             </div>
 
             <h1 className="text-5xl md:text-7xl lg:text-8xl font-black font-display tracking-tight text-white mb-6 leading-tight" style={{ textShadow: '0 8px 30px rgba(0,0,0,0.6)' }}>
-                Your Next Great <br /> <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-primary to-purple-500 italic drop-shadow-lg">Adventure</span> Awaits
+                Your Next Great <br /> <span>Adventure</span> Awaits
             </h1>
 
             <p className="text-lg md:text-2xl text-slate-300 max-w-3xl mb-14 font-medium" style={{ textShadow: '0 4px 15px rgba(0,0,0,0.8)' }}>
