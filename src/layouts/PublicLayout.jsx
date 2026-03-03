@@ -21,6 +21,7 @@ export default function PublicLayout() {
                     zIndex: 0,
                 }}
             >
+                <source src="/videos/bg.webm" type="video/webm" />
                 <source src="/videos/bg.mp4" type="video/mp4" />
             </video>
 
@@ -46,7 +47,7 @@ export default function PublicLayout() {
 
             {/* Simple Footer */}
             <footer className="relative z-10 w-full text-center py-6 text-xs text-white/30 border-t border-white/5">
-                <p>© 2024 Heavencraft Server Network · Not affiliated with Mojang or Microsoft</p>
+                <p>© 2026 Heavencraft Server Network · Not affiliated with Mojang or Microsoft</p>
             </footer>
         </div>
     )

@@ -2,7 +2,7 @@ import { useState } from 'react'
 
 export default function HomePage() {
     const [copied, setCopied] = useState(false)
-    const serverIP = 'heavencraft_tm.aternos.me:39013'
+    const serverIP = import.meta.env.VITE_SERVER_IP || 'play.heavencraft.net'
 
     const handleCopy = () => {
         navigator.clipboard.writeText(serverIP)

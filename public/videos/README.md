@@ -9,34 +9,22 @@ Place your background video file(s) here.
    - Recommended resolution: 1920×1080 or higher
    - Keep file size under ~20 MB for fast load times
 
-2. Example files:
-   - `bg.mp4` — main background video
-   - `bg.webm` — WebM fallback for better browser compatibility
+2. Required file names (both recommended for max compatibility):
+   - `bg.webm` — preferred (smaller, better quality)
+   - `bg.mp4` — fallback for Safari / older browsers
 
-## How to wire it up in the app
+## Where it's used
 
-In `src/pages/AuthPage.jsx`, replace `<MinecraftBackground />` with:
+The video background is wired up in `src/layouts/PublicLayout.jsx`.
+Both sources are already referenced — just drop the files here and they'll work automatically:
 
 ```jsx
-<video
-  autoPlay
-  loop
-  muted
-  playsInline
-  style={{
-    position: 'fixed',
-    inset: 0,
-    width: '100%',
-    height: '100%',
-    objectFit: 'cover',
-    zIndex: 0,
-  }}
->
+<video autoPlay loop muted playsInline>
   <source src="/videos/bg.webm" type="video/webm" />
   <source src="/videos/bg.mp4"  type="video/mp4"  />
 </video>
 ```
 
-> **Tip:** If you want both the video AND the Minecraft block animation on top of it,
-> keep `<MinecraftBackground />` and just add reduced-opacity blocks.
-> Set each block's `alpha` to `0.05–0.15` in `MinecraftBackground.jsx`.
+> **Tip:** If you want a static image fallback for when no video is present,
+> set the `background-image` CSS property on the `<video>` element's parent.
+> The dark overlay will still render correctly.

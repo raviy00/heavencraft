@@ -263,11 +263,11 @@ export default function DashboardPage() {
                     {loading ? (
                         <div className="text-center py-4 text-slate-400">Loading activity feed...</div>
                     ) : recentActivity.length > 0 ? (
-                        recentActivity.map((evt) => {
+                        recentActivity.map((evt, idx) => {
                             const color = activityColors[evt.type] || '#94a3b8'
                             return (
                                 <div
-                                    key={evt._id || Math.random()}
+                                    key={evt._id ?? evt.id ?? idx}
                                     className="flex items-center gap-4 p-3 rounded-lg"
                                     style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(51,65,85,0.2)' }}
                                 >

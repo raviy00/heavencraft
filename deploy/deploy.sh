@@ -119,6 +119,7 @@ print_step "Step 6/8 — Installing dependencies & building frontend"
 # Write the frontend .env so Vite knows where the API is
 cat > "$APP_DIR/.env.production" <<EOF
 VITE_API_URL=http://$SERVER_NAME/api
+VITE_SERVER_IP=play.heavencraft.net
 EOF
 print_ok "Frontend .env.production written (API → http://$SERVER_NAME/api)"
 
