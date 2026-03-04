@@ -1,5 +1,8 @@
 import 'dotenv/config'
 import dns from 'node:dns'
+import { fileURLToPath } from 'node:url'
+import { dirname, join } from 'node:path'
+import { existsSync } from 'node:fs'
 import express from 'express'
 import cors from 'cors'
 import mongoose from 'mongoose'
@@ -20,26 +23,46 @@ import contactRoutes from './routes/contact.js'
 dns.setDefaultResultOrder('ipv4first')
 dns.setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1'])
 
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
+const DIST_PATH = join(__dirname, '..', 'dist')
+
 const app = express()
 const PORT = process.env.PORT || 3001
+const IS_PROD = process.env.NODE_ENV === 'production'
 
-// ── Security headers (no extra dep needed) ──────────────────
+// ── Security headers ─────────────────────────────────────────
 app.use((req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff')
     res.setHeader('X-Frame-Options', 'SAMEORIGIN')
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
-    res.setHeader('X-XSS-Protection', '0') // modern browsers ignore it; CSP is better
+    res.setHeader('X-XSS-Protection', '0')
     next()
 })
 
-// ── Middleware ──────────────────────────────────
+// ── CORS — allow localhost dev + Render deployed URL ─────────
+const allowedOrigins = [
+    process.env.FRONTEND_URL,
+    process.env.RENDER_EXTERNAL_URL,
+    'http://localhost:5173',
+    'http://localhost:3001',
+].filter(Boolean)
+
 app.use(cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    origin: (origin, callback) => {
+        // Allow requests with no origin (curl, Postman, same-origin requests)
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true)
+        } else {
+            callback(new Error(`CORS: origin ${origin} not allowed`))
+        }
+    },
     credentials: true,
 }))
+
 app.use(express.json({ limit: '2mb' }))
 
-// ── Routes ─────────────────────────────────────
+// ── API Routes ───────────────────────────────────────────────
 app.use('/api/auth', authRoutes)
 app.use('/api/server', serverRoutes)
 app.use('/api/players', playerRoutes)
@@ -56,22 +79,35 @@ app.get('/api/health', (req, res) => {
     res.json({
         status: 'ok',
         timestamp: new Date().toISOString(),
+        env: IS_PROD ? 'production' : 'development',
         mongo: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
     })
 })
 
-// ── 404 fallback ────────────────────────────────
-app.use((req, res) => {
-    res.status(404).json({ error: 'Not found' })
+// ── API 404 — scoped to /api/* only ─────────────────────────
+app.use('/api', (req, res) => {
+    res.status(404).json({ error: 'API endpoint not found' })
 })
 
-// ── Global error handler ────────────────────────
-app.use((err, req, res, next) => {
+// ── Serve React frontend in production ───────────────────────
+// In production the Express server doubles as a static file server,
+// so we only need a single Render service (no separate static site).
+if (IS_PROD && existsSync(DIST_PATH)) {
+    app.use(express.static(DIST_PATH, { maxAge: '1y', etag: true }))
+    // SPA fallback — return index.html for all non-API routes
+    app.get('*', (_req, res) => {
+        res.sendFile(join(DIST_PATH, 'index.html'))
+    })
+}
+
+// ── Global error handler ─────────────────────────────────────
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, _next) => {
     console.error('Unhandled error:', err)
     res.status(500).json({ error: 'Internal server error' })
 })
 
-// ── MongoDB + Start ────────────────────────────
+// ── MongoDB + Start ──────────────────────────────────────────
 async function start() {
     try {
         console.log('⛏  Connecting to MongoDB…')
@@ -85,22 +121,16 @@ async function start() {
         process.exit(1)
     }
 
-    app.listen(PORT, () => {
-        console.log(`🚀 Heavencraft API running on http://localhost:${PORT}`)
-        console.log(`📡 Endpoints:`)
-        console.log(`   Auth:        /api/auth/discord, /api/auth/google, /api/auth/microsoft`)
-        console.log(`   Server:      /api/server/info, /status, /start, /stop`)
-        console.log(`   Players:     /api/players`)
-        console.log(`   Leaderboard: /api/leaderboard`)
-        console.log(`   Mods:        /api/mods`)
-        console.log(`   Activity:    /api/activity`)
-        console.log(`   Stats:       /api/stats/network, /top`)
-        console.log(`   Map:         /api/map/chunks, /pois`)
-        console.log(`   Users:       /api/users/profile, /role`)
+    // Render requires listening on 0.0.0.0 (not just 127.0.0.1)
+    app.listen(PORT, '0.0.0.0', () => {
+        console.log(`🚀 Heavencraft running on port ${PORT} [${IS_PROD ? 'production' : 'development'}]`)
+        if (IS_PROD && existsSync(DIST_PATH)) {
+            console.log(`🌐 Serving React frontend from ${DIST_PATH}`)
+        }
     })
 }
 
-// ── Handle unexpected rejections ────────────────
+// ── Handle unexpected rejections ─────────────────────────────
 process.on('unhandledRejection', (reason) => {
     console.error('Unhandled promise rejection:', reason)
 })

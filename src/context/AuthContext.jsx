@@ -3,7 +3,7 @@ import { authApi } from '../api'
 
 const AuthContext = createContext(null)
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
+const API_URL = import.meta.env.VITE_API_URL || '/api'
 
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(null)

@@ -10,6 +10,7 @@ const GOOGLE_API = 'https://www.googleapis.com/oauth2/v2'
 const MICROSOFT_API_AUTH = 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize'
 const MICROSOFT_API_TOKEN = 'https://login.microsoftonline.com/common/oauth2/v2.0/token'
 const MICROSOFT_GRAPH_ME = 'https://graph.microsoft.com/v1.0/me'
+
 const {
     DISCORD_CLIENT_ID,
     DISCORD_CLIENT_SECRET,
@@ -20,9 +21,13 @@ const {
     MICROSOFT_CLIENT_ID,
     MICROSOFT_CLIENT_SECRET,
     MICROSOFT_REDIRECT_URI,
-    FRONTEND_URL,
     JWT_SECRET,
 } = process.env
+
+// FRONTEND_URL: explicit env var > Render's auto-injected URL > localhost fallback
+const FRONTEND_URL = process.env.FRONTEND_URL
+    || process.env.RENDER_EXTERNAL_URL
+    || 'http://localhost:5173'
 
 // Dynamically import User model only when MongoDB is connected
 async function getUser() {

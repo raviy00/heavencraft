@@ -9,6 +9,13 @@ export default defineConfig({
   ],
   server: {
     port: 5173,
+    proxy: {
+      // Forward all /api requests to the Express backend in dev
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
+    },
   },
   build: {
     sourcemap: false,
@@ -22,3 +29,4 @@ export default defineConfig({
     },
   },
 })
+

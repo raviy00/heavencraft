@@ -1,0 +1,102 @@
+# ================================================================
+#  Heavencraft — Render Blueprint
+#  Single Web Service: Express backend serves the Vite frontend.
+#  No separate static site needed.
+#
+#  SETUP:
+#  1. Push this repo to GitHub
+#  2. Go to https://dashboard.render.com → New → Blueprint
+#  3. Connect your repo — Render will find this file automatically
+#  4. Fill in the secret env vars in the Render dashboard
+#  5. After first deploy, set DISCORD_REDIRECT_URI and GOOGLE_REDIRECT_URI
+#     to https://<your-service>.onrender.com/api/auth/discord/callback etc.
+# ================================================================
+
+services:
+  - type: web
+    name: heavencraft
+    runtime: node
+    region: oregon          # Change to: frankfurt, singapore, ohio, virginia
+    plan: free              # Upgrade to 'starter' to avoid cold-start spin-down
+
+    # ── Build ────────────────────────────────────────────────────
+    # 1. Install frontend deps and build Vite → dist/
+    # 2. Install backend deps
+    buildCommand: npm install && npm run build && npm install --prefix server
+
+    # ── Start ────────────────────────────────────────────────────
+    # Run Express from the repo root (so ../dist resolves correctly)
+    startCommand: node server/index.js
+
+    # ── Health check ─────────────────────────────────────────────
+    healthCheckPath: /api/health
+
+    # ── Auto-deploy on push ──────────────────────────────────────
+    autoDeploy: true
+
+    # ── Environment Variables ────────────────────────────────────
+    envVars:
+      # Node environment — tells Express to serve the frontend
+      - key: NODE_ENV
+        value: production
+
+      # Minecraft server IP shown on the homepage
+      - key: VITE_SERVER_IP
+        value: play.heavencraft.net
+
+      # Map seed (safe to commit)
+      - key: MAP_SEED
+        value: "-4399806456249969304"
+
+      # Minecraft management websocket (safe to commit)
+      - key: MC_MANAGEMENT_WS
+        value: wss://play.heavencraft.net:25585
+
+      # ── SECRETS — set these in the Render dashboard ──────────
+      # (sync: false means Render will prompt you to fill them in)
+
+      # MongoDB Atlas connection string
+      - key: MONGODB_URI
+        sync: false
+
+      # JWT secret — generate with:
+      # node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+      - key: JWT_SECRET
+        sync: false
+
+      # Discord OAuth (from https://discord.com/developers/applications)
+      - key: DISCORD_CLIENT_ID
+        sync: false
+      - key: DISCORD_CLIENT_SECRET
+        sync: false
+      # Set to: https://<your-service>.onrender.com/api/auth/discord/callback
+      - key: DISCORD_REDIRECT_URI
+        sync: false
+
+      # Google OAuth (from https://console.cloud.google.com)
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      # Set to: https://<your-service>.onrender.com/api/auth/google/callback
+      - key: GOOGLE_REDIRECT_URI
+        sync: false
+
+      # Microsoft OAuth (from https://portal.azure.com)
+      - key: MICROSOFT_CLIENT_ID
+        sync: false
+      - key: MICROSOFT_CLIENT_SECRET
+        sync: false
+      # Set to: https://<your-service>.onrender.com/api/auth/microsoft/callback
+      - key: MICROSOFT_REDIRECT_URI
+        sync: false
+
+      # Email (Gmail App Password for Nodemailer)
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_PASS
+        sync: false
+
+      # Minecraft management token (optional — leave blank if unused)
+      - key: MC_MANAGEMENT_TOKEN
+        sync: false
