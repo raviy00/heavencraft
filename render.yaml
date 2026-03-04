@@ -20,9 +20,9 @@ services:
     plan: free              # Upgrade to 'starter' to avoid cold-start spin-down
 
     # ── Build ────────────────────────────────────────────────────
-    # 1. Install frontend deps and build Vite → dist/
-    # 2. Install backend deps
-    buildCommand: npm install && npm run build && npm install --prefix server
+    # --include=dev is required: vite/tailwind are devDeps but needed for the build.
+    # NODE_ENV=production would skip them without this flag.
+    buildCommand: npm install --include=dev && npm run build && npm install --prefix server
 
     # ── Start ────────────────────────────────────────────────────
     # Run Express from the repo root (so ../dist resolves correctly)
