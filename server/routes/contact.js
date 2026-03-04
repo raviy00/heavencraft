@@ -5,29 +5,51 @@ import ContactMessage from '../models/ContactMessage.js'
 
 const router = express.Router()
 
-// ── Email transporter (Gmail) ────────────────────────────────
-const transporter = nodemailer.createTransport({
-    service: 'gmail',
+// ── Build transporter lazily so env vars are definitely loaded ─
+function getTransporter() {
+  return nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false,          // STARTTLS
     auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,   // Gmail App Password (no quotes)
     },
-})
+    tls: {
+      rejectUnauthorized: false,      // fixes some self-signed cert issues
+    },
+  })
+}
 
-// Send notification email to admin when a contact form is submitted
+// ── Verify SMTP connection once at startup ─────────────────────
+// This will print to Render logs so you can confirm credentials work
+setTimeout(async () => {
+  try {
+    const t = getTransporter()
+    await t.verify()
+    console.log('✅ Nodemailer: SMTP connection to Gmail verified')
+  } catch (err) {
+    console.error('❌ Nodemailer: SMTP verification failed —', err.message)
+    console.error('   Check EMAIL_USER and EMAIL_PASS env vars, and that the Gmail App Password has no surrounding quotes')
+  }
+}, 3000) // wait 3s after startup
+
+// ── Send notification email ────────────────────────────────────
 async function sendContactNotification({ name, email, message }) {
-    const submittedAt = new Date().toLocaleString('en-US', {
-        timeZone: 'Asia/Colombo',
-        dateStyle: 'full',
-        timeStyle: 'short',
-    })
+  const submittedAt = new Date().toLocaleString('en-US', {
+    timeZone: 'Asia/Colombo',
+    dateStyle: 'full',
+    timeStyle: 'short',
+  })
 
-    await transporter.sendMail({
-        from: `"Heavencraft Contact" <${process.env.EMAIL_USER}>`,
-        to: process.env.EMAIL_USER,  // sends to yourself
-        replyTo: email,              // reply goes directly to the sender
-        subject: `📬 New Contact Message from ${name}`,
-        html: `
+  const transporter = getTransporter()
+
+  const info = await transporter.sendMail({
+    from: `"Heavencraft Contact" <${process.env.EMAIL_USER}>`,
+    to: process.env.EMAIL_USER,
+    replyTo: email,
+    subject: `📬 New Contact Message from ${name}`,
+    html: `
 <!DOCTYPE html>
 <html>
 <head>
@@ -72,69 +94,69 @@ async function sendContactNotification({ name, email, message }) {
     </div>
   </div>
 </body>
-</html>
-        `,
-        text: `New contact message on Heavencraft\n\nFrom: ${name} <${email}>\n\nMessage:\n${message}\n\nReceived: ${submittedAt}`,
-    })
+</html>`,
+    text: `New contact message on Heavencraft\n\nFrom: ${name} <${email}>\n\nMessage:\n${message}\n\nReceived: ${submittedAt}`,
+  })
+
+  console.log(`✅ Contact email sent to ${process.env.EMAIL_USER} — messageId: ${info.messageId}`)
 }
 
 // ── Middleware: require admin JWT ────────────────────────────
 function requireAdmin(req, res, next) {
-    const authHeader = req.headers.authorization
-    if (!authHeader?.startsWith('Bearer ')) {
-        return res.status(401).json({ error: 'Not authenticated' })
+  const authHeader = req.headers.authorization
+  if (!authHeader?.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Not authenticated' })
+  }
+  try {
+    const decoded = jwt.verify(authHeader.split(' ')[1], process.env.JWT_SECRET)
+    if (decoded.role !== 'admin') {
+      return res.status(403).json({ error: 'Admin access required' })
     }
-    try {
-        const decoded = jwt.verify(authHeader.split(' ')[1], process.env.JWT_SECRET)
-        if (decoded.role !== 'admin') {
-            return res.status(403).json({ error: 'Admin access required' })
-        }
-        req.user = decoded
-        next()
-    } catch {
-        return res.status(401).json({ error: 'Invalid token' })
-    }
+    req.user = decoded
+    next()
+  } catch {
+    return res.status(401).json({ error: 'Invalid token' })
+  }
 }
 
 // ── POST /api/contact ────────────────────────────────────────
 router.post('/', async (req, res) => {
-    try {
-        const { name, email, message } = req.body
+  try {
+    const { name, email, message } = req.body
 
-        if (!name || !email || !message) {
-            return res.status(400).json({ error: 'Please provide all required fields: name, email, and message.' })
-        }
-
-        // Basic email format check
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-        if (!emailRegex.test(email)) {
-            return res.status(400).json({ error: 'Please provide a valid email address.' })
-        }
-
-        // Save to DB
-        const newMessage = new ContactMessage({ name, email, message })
-        await newMessage.save()
-
-        // Send email notification (non-blocking — don't fail the request if email fails)
-        sendContactNotification({ name, email, message }).catch((err) => {
-            console.error('[Contact Email Error]', err.message)
-        })
-
-        res.status(201).json({ message: 'Your message has been successfully sent!' })
-    } catch (error) {
-        console.error('[Contact Error]', error)
-        res.status(500).json({ error: 'An error occurred while saving your message. Please try again later.' })
+    if (!name || !email || !message) {
+      return res.status(400).json({ error: 'Please provide all required fields: name, email, and message.' })
     }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ error: 'Please provide a valid email address.' })
+    }
+
+    // Save to DB
+    const newMessage = new ContactMessage({ name, email, message })
+    await newMessage.save()
+
+    // Send email — log any error clearly to Render logs
+    sendContactNotification({ name, email, message }).catch((err) => {
+      console.error(`❌ Contact email FAILED for "${name}" <${email}>:`, err.message)
+    })
+
+    res.status(201).json({ message: 'Your message has been successfully sent!' })
+  } catch (error) {
+    console.error('[Contact Error]', error)
+    res.status(500).json({ error: 'An error occurred while saving your message. Please try again later.' })
+  }
 })
 
 // ── GET /api/contact — Admin only ────────────────────────────
 router.get('/', requireAdmin, async (req, res) => {
-    try {
-        const messages = await ContactMessage.find().sort({ createdAt: -1 })
-        res.json(messages)
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to retrieve messages.' })
-    }
+  try {
+    const messages = await ContactMessage.find().sort({ createdAt: -1 })
+    res.json(messages)
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to retrieve messages.' })
+  }
 })
 
 export default router
