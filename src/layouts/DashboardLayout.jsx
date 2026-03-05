@@ -49,17 +49,17 @@ export default function DashboardLayout() {
 
     return (
         <ServerStatusContext.Provider value={serverInfo}>
-            <div className="flex min-h-screen" style={{ background: '#0b1520', position: 'relative' }}>
-                {/* Pixel art animated background */}
-                <PixelBackground />
-
+            <div className="flex min-h-screen" style={{ background: '#0b1520' }}>
                 <Sidebar mobileOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-                {/* Main content area */}
+                {/* Main content area — pixel canvas lives here */}
                 <div
                     className="flex-1 flex flex-col min-h-screen lg:ml-60"
-                    style={{ minWidth: 0, position: 'relative', zIndex: 1 }}
+                    style={{ minWidth: 0, position: 'relative' }}
                 >
+                    {/* Pixel art animated background — sits behind all content */}
+                    <PixelBackground />
+
                     {/* Top bar */}
                     <header
                         className="sticky top-0 z-20 flex items-center gap-4 px-6 py-4"
@@ -67,6 +67,8 @@ export default function DashboardLayout() {
                             background: 'rgba(11, 21, 32, 0.9)',
                             backdropFilter: 'blur(12px)',
                             borderBottom: '1px solid rgba(51,65,85,0.3)',
+                            position: 'relative',
+                            zIndex: 10,
                         }}
                     >
                         {/* Mobile hamburger */}
@@ -87,7 +89,7 @@ export default function DashboardLayout() {
                     </header>
 
                     {/* Page content */}
-                    <main className="flex-1 p-6">
+                    <main className="flex-1 p-6" style={{ position: 'relative', zIndex: 1 }}>
                         <Outlet />
                     </main>
                 </div>

@@ -225,13 +225,13 @@ export default function PixelBackground() {
             ref={canvasRef}
             aria-hidden="true"
             style={{
-                position: 'fixed',
+                position: 'absolute',
                 inset: 0,
                 width: '100%',
                 height: '100%',
                 pointerEvents: 'none',
                 zIndex: 0,
-                opacity: 0.65,
+                opacity: 1,
             }}
         />
     )
