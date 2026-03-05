@@ -12,6 +12,7 @@ import authRoutes from './routes/auth.js'
 import serverRoutes from './routes/server.js'
 import playerRoutes from './routes/players.js'
 import leaderboardRoutes from './routes/leaderboard.js'
+import { startBot } from './bot.js'
 import modRoutes from './routes/mods.js'
 import activityRoutes from './routes/activity.js'
 import statsRoutes from './routes/stats.js'
@@ -127,6 +128,9 @@ async function start() {
         if (IS_PROD && existsSync(DIST_PATH)) {
             console.log(`🌐 Serving React frontend from ${DIST_PATH}`)
         }
+
+        // Start the keep-alive Aternos bot
+        startBot();
     })
 }
 
