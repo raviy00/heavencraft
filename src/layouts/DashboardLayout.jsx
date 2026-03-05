@@ -1,6 +1,7 @@
 import { useState, useEffect, createContext, useContext } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
+import PixelBackground from '../components/PixelBackground'
 import { serverApi } from '../api'
 
 // ── Shared server status context ─────────────────────────────────────────────
@@ -48,13 +49,16 @@ export default function DashboardLayout() {
 
     return (
         <ServerStatusContext.Provider value={serverInfo}>
-            <div className="flex min-h-screen" style={{ background: '#0b1520' }}>
+            <div className="flex min-h-screen" style={{ background: '#0b1520', position: 'relative' }}>
+                {/* Pixel art animated background */}
+                <PixelBackground />
+
                 <Sidebar mobileOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
                 {/* Main content area */}
                 <div
                     className="flex-1 flex flex-col min-h-screen lg:ml-60"
-                    style={{ minWidth: 0 }}
+                    style={{ minWidth: 0, position: 'relative', zIndex: 1 }}
                 >
                     {/* Top bar */}
                     <header
