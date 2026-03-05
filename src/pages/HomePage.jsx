@@ -12,19 +12,9 @@ export default function HomePage() {
 
     return (
         <div className="w-full max-w-5xl mx-auto flex flex-col items-center justify-center flex-1 text-center" style={{ animation: 'fadeIn 0.8s ease-out' }}>
-            <div className="p-1 rounded-full bg-gradient-to-r from-transparent via-white/20 to-transparent mb-8 animate-pulse">
-                <div className="px-5 py-2 rounded-full bg-black/40 border border-white/10 backdrop-blur-md">
-                    <span className="text-primary font-bold tracking-widest uppercase text-xs md:text-sm">🔥 Beta Season 4 is Live</span>
-                </div>
-            </div>
-
             <h1 className="text-5xl md:text-7xl lg:text-8xl font-black font-display tracking-tight text-white mb-6 leading-tight" style={{ textShadow: '0 8px 30px rgba(0,0,0,0.6)' }}>
                 Your Next Great <br /> <span>Adventure</span> Awaits
             </h1>
-
-            <p className="text-lg md:text-2xl text-slate-300 max-w-3xl mb-14 font-medium" style={{ textShadow: '0 4px 15px rgba(0,0,0,0.8)' }}>
-                Join thousands of players on the Heavencraft network. Custom survival, intense skyblock, and endless minigames.
-            </p>
 
             <div className="flex flex-col sm:flex-row items-center gap-6">
                 {/* Server IP Badge */}
