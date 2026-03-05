@@ -87,17 +87,16 @@ export default function AuthCard({ initialView = 'login' }) {
 
             {/* Form — right side */}
             <div className="auth-card-form">
-                {view === 'login'
-                    ? <LoginPanel onSwitch={() => setView('register')} />
-                    : <RegisterPanel onSwitch={() => setView('login')} />
-                }
+                {view === 'login' && <LoginPanel onSwitch={() => setView('register')} onForgot={() => setView('forgot')} />}
+                {view === 'register' && <RegisterPanel onSwitch={() => setView('login')} />}
+                {view === 'forgot' && <ForgotPanel onBack={() => setView('login')} />}
             </div>
         </div>
     )
 }
 
 // ─── Login Panel ───
-function LoginPanel({ onSwitch }) {
+function LoginPanel({ onSwitch, onForgot }) {
     const { login } = useAuth()
     const [form, setForm] = useState({ username: '', password: '', remember: false })
     const [loading, setLoading] = useState(false)
@@ -154,7 +153,7 @@ function LoginPanel({ onSwitch }) {
                         <input name="remember" type="checkbox" checked={form.remember} onChange={onChange} />
                         Remember me
                     </label>
-                    <a href="#" className="auth-link">Forgot password?</a>
+                    <button type="button" onClick={onForgot} className="auth-link" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Forgot password?</button>
                 </div>
 
                 <button type="submit" disabled={loading} className="auth-submit-btn login-btn">
@@ -267,6 +266,88 @@ function RegisterPanel({ onSwitch }) {
                 Have an account?{' '}
                 <button onClick={onSwitch} className="auth-switch-link">Sign-in</button>
             </p>
+        </div>
+    )
+}
+
+// ─── Forgot Password Panel ───
+function ForgotPanel({ onBack }) {
+    const [email, setEmail] = useState('')
+    const [loading, setLoading] = useState(false)
+    const [message, setMessage] = useState('')
+    const [error, setError] = useState('')
+
+    const onSubmit = async e => {
+        e.preventDefault()
+        if (!email.trim()) return setError('Enter your email address.')
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return setError('Enter a valid email.')
+
+        setError('')
+        setLoading(true)
+        try {
+            const res = await fetch('/api/auth/forgot-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: email.trim() }),
+            })
+            const data = await res.json()
+            if (!res.ok) throw new Error(data.error || 'Request failed')
+            setMessage(data.message)
+        } catch (err) {
+            setError(err.message || 'Something went wrong. Try again.')
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    return (
+        <div style={{ animation: 'fadeIn 0.3s ease' }}>
+            <button
+                onClick={onBack}
+                className="auth-link"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 0 0.75rem 0', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.78rem' }}
+            >
+                <span className="material-symbols-outlined" style={{ fontSize: '0.95rem' }}>arrow_back</span>
+                Back to login
+            </button>
+
+            <h2 className="auth-card-title" style={{ color: '#258cf4' }}>Forgot Password</h2>
+            <p className="auth-card-subtitle">Enter your email to receive a reset link.</p>
+
+            {message ? (
+                <div className="auth-success">
+                    <span className="material-symbols-outlined" style={{ fontSize: '0.95rem' }}>check_circle</span>
+                    {message}
+                </div>
+            ) : (
+                <>
+                    {error && (
+                        <div className="auth-error">
+                            <span className="material-symbols-outlined" style={{ fontSize: '0.95rem' }}>error</span>
+                            {error}
+                        </div>
+                    )}
+                    <form onSubmit={onSubmit} className="auth-form-fields" noValidate>
+                        <div className="auth-input-wrap">
+                            <input
+                                type="email"
+                                placeholder="Email address"
+                                value={email}
+                                onChange={e => setEmail(e.target.value)}
+                                autoComplete="email"
+                                className="auth-input"
+                            />
+                            <span className="material-symbols-outlined auth-input-icon">mail</span>
+                        </div>
+                        <button type="submit" disabled={loading} className="auth-submit-btn login-btn">
+                            {loading
+                                ? <><span className="material-symbols-outlined spin-icon" style={{ fontSize: '1rem' }}>progress_activity</span> Sending…</>
+                                : 'Send Reset Link'
+                            }
+                        </button>
+                    </form>
+                </>
+            )}
         </div>
     )
 }

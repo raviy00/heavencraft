@@ -406,6 +406,102 @@ router.post('/login', async (req, res) => {
 
 
 // ═══════════════════════════════════════════════
+//  FORGOT / RESET PASSWORD
+// ═══════════════════════════════════════════════
+
+// POST /api/auth/forgot-password — sends reset email
+router.post('/forgot-password', async (req, res) => {
+    const { email } = req.body
+    if (!email) return res.status(400).json({ error: 'Email is required' })
+
+    try {
+        const User = await getUser()
+        if (!User) return res.status(500).json({ error: 'Database error' })
+
+        const user = await User.findOne({ email: email.toLowerCase().trim() })
+
+        // Always respond with success to prevent email enumeration
+        if (!user || user.authProvider !== 'local') {
+            return res.json({ message: 'If that email is registered, a reset link has been sent.' })
+        }
+
+        // Generate a short-lived token
+        const crypto = await import('node:crypto')
+        const rawToken = crypto.default.randomBytes(32).toString('hex')
+        const tokenHash = crypto.default.createHash('sha256').update(rawToken).digest('hex')
+
+        user.resetPasswordToken = tokenHash
+        user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000) // 1 hour
+        await user.save()
+
+        const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${rawToken}&email=${encodeURIComponent(email)}`
+
+        // Send email via nodemailer
+        const nodemailer = await import('nodemailer')
+        const transporter = nodemailer.default.createTransport({
+            service: 'gmail',
+            auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
+        })
+
+        await transporter.sendMail({
+            from: `"Heavencraft" <${process.env.EMAIL_USER}>`,
+            to: email,
+            subject: '🔑 Reset your Heavencraft password',
+            html: `
+                <div style="background:#0b1520;color:#f1f5f9;font-family:sans-serif;padding:32px;border-radius:12px;max-width:480px;margin:auto;">
+                    <h2 style="color:#258cf4;margin-bottom:8px;">Password Reset</h2>
+                    <p>Hi <strong>${user.username}</strong>,</p>
+                    <p>Click the button below to reset your Heavencraft password. This link expires in <strong>1 hour</strong>.</p>
+                    <a href="${resetLink}"
+                       style="display:inline-block;margin:20px 0;padding:12px 28px;background:#258cf4;color:#fff;border-radius:8px;text-decoration:none;font-weight:700;">
+                        Reset Password
+                    </a>
+                    <p style="color:#64748b;font-size:13px;">If you didn't request this, ignore this email.</p>
+                </div>
+            `,
+        })
+
+        res.json({ message: 'If that email is registered, a reset link has been sent.' })
+    } catch (err) {
+        console.error('Forgot password error:', err)
+        res.status(500).json({ error: 'Failed to send reset email' })
+    }
+})
+
+// POST /api/auth/reset-password — sets a new password
+router.post('/reset-password', async (req, res) => {
+    const { email, token, password } = req.body
+    if (!email || !token || !password) return res.status(400).json({ error: 'All fields required' })
+    if (password.length < 8) return res.status(400).json({ error: 'Password must be 8+ characters' })
+
+    try {
+        const crypto = await import('node:crypto')
+        const tokenHash = crypto.default.createHash('sha256').update(token).digest('hex')
+
+        const User = await getUser()
+        const user = await User.findOne({
+            email: email.toLowerCase().trim(),
+            resetPasswordToken: tokenHash,
+            resetPasswordExpires: { $gt: new Date() }, // not expired
+        })
+
+        if (!user) return res.status(400).json({ error: 'Reset link is invalid or expired.' })
+
+        user.password = await bcrypt.hash(password, 10)
+        user.resetPasswordToken = undefined
+        user.resetPasswordExpires = undefined
+        await user.save()
+
+        res.json({ message: 'Password reset successfully! You can now log in.' })
+    } catch (err) {
+        console.error('Reset password error:', err)
+        res.status(500).json({ error: 'Internal server error' })
+    }
+})
+
+
+
+// ═══════════════════════════════════════════════
 //  SHARED ROUTES
 // ═══════════════════════════════════════════════
 
