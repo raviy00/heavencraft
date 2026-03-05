@@ -91,8 +91,12 @@ function DiscordIcon() {
 }
 
 // ─── Main AuthCard ───
-export default function AuthCard() {
-    const [view, setView] = useState('login')
+export default function AuthCard({ initialView = 'login' }) {
+    const [view, setView] = useState(initialView)
+
+    useEffect(() => {
+        setView(initialView)
+    }, [initialView])
 
     return (
         <div className="auth-card-wrapper" style={{ animation: 'cardAppear 0.45s cubic-bezier(0.34,1.56,0.64,1) both' }}>
