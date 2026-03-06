@@ -8,7 +8,7 @@ import ContactPage from './pages/ContactPage'
 import SupportPage from './pages/SupportPage'
 import DonatePage from './pages/DonatePage'
 import AuthCallbackPage from './pages/AuthCallbackPage'
-
+import ResetPasswordPage from './pages/ResetPasswordPage'
 import DashboardLayout from './layouts/DashboardLayout'
 import DashboardPage from './pages/DashboardPage'
 import ServerInfoPage from './pages/ServerInfoPage'
@@ -67,6 +67,7 @@ function AppRoutes() {
     <Routes>
       {/* OAuth Callback — must be outside layouts */}
       <Route path="/auth/callback" element={<AuthCallbackPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
 
       {/* Public Pages */}
       <Route

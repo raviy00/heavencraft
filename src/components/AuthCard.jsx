@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../context/AuthContext'
+import { authApi } from '../api'
 
 // ─── All character images ───
 const IMAGES = [
@@ -285,14 +286,8 @@ function ForgotPanel({ onBack }) {
         setError('')
         setLoading(true)
         try {
-            const res = await fetch('/api/auth/forgot-password', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: email.trim() }),
-            })
-            const data = await res.json()
-            if (!res.ok) throw new Error(data.error || 'Request failed')
-            setMessage(data.message)
+            const res = await authApi.forgotPassword({ email: email.trim() })
+            setMessage(res.message)
         } catch (err) {
             setError(err.message || 'Something went wrong. Try again.')
         } finally {

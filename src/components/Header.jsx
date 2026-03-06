@@ -25,7 +25,7 @@ export default function Header() {
     return (
         <>
             <header className="absolute top-0 w-full z-40 px-4 md:px-6 lg:px-12 py-4 bg-gradient-to-b from-black/80 to-transparent">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between relative">
                     {/* Left: Logo and Name */}
                     <Link to="/" className="flex items-center gap-2 decoration-transparent group shrink-0">
                         <img
@@ -47,7 +47,7 @@ export default function Header() {
                     </Link>
 
                     {/* Middle: Navbar — desktop only */}
-                    <nav className="hidden md:flex items-center gap-6 lg:gap-8">
+                    <nav className="hidden md:flex items-center gap-6 lg:gap-8 absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
                         {navLinks.map((link) => {
                             const isActive = location.pathname === link.path
                             return (

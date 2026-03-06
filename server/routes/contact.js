@@ -137,15 +137,12 @@ router.post('/', async (req, res) => {
     const newMessage = new ContactMessage({ name, email, message })
     await newMessage.save()
 
-    // Send email — log any error clearly to Render logs
-    sendContactNotification({ name, email, message }).catch((err) => {
-      console.error(`❌ Contact email FAILED for "${name}" <${email}>:`, err.message)
-    })
+    // Send email - wait for it to finish so we know if it succeeded
+    await sendContactNotification({ name, email, message })
 
     res.status(201).json({ message: 'Your message has been successfully sent!' })
   } catch (error) {
-    console.error('[Contact Error]', error)
-    res.status(500).json({ error: 'An error occurred while saving your message. Please try again later.' })
+    res.status(500).json({ error: 'Failed: ' + error.message })
   }
 })
 
