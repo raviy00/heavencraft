@@ -1,8 +1,24 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { serverApi } from '../api'
 
 export default function HomePage() {
     const [copied, setCopied] = useState(false)
+    const [serverInfo, setServerInfo] = useState(null)
     const serverIP = import.meta.env.VITE_SERVER_IP || 'heavencraft_tm.aternos.me:39013'
+
+    useEffect(() => {
+        // Fetch full server info immediately
+        serverApi.info()
+            .then(data => setServerInfo(data))
+            .catch(err => console.error('Failed to fetch server status:', err))
+
+        // Refresh every 15 seconds
+        const interval = setInterval(() => {
+            serverApi.info().then(data => setServerInfo(data)).catch(() => { })
+        }, 15000)
+
+        return () => clearInterval(interval)
+    }, [])
 
     const handleCopy = () => {
         navigator.clipboard.writeText(serverIP)
@@ -11,33 +27,82 @@ export default function HomePage() {
     }
 
     return (
-        <div className="w-full max-w-5xl mx-auto flex flex-col items-center justify-center flex-1 text-center" style={{ animation: 'fadeIn 0.8s ease-out' }}>
+        <div className="w-full max-w-6xl mx-auto flex flex-col items-center justify-center flex-1 text-center" style={{ animation: 'fadeIn 0.8s ease-out' }}>
             <h1 className="text-5xl md:text-7xl lg:text-8xl font-black font-display tracking-tight text-white mb-6 leading-tight" style={{ textShadow: '0 8px 30px rgba(0,0,0,0.6)' }}>
                 Your Next Great <br /> <span>Adventure</span> Awaits
             </h1>
 
-            <div className="flex flex-col sm:flex-row items-center gap-6">
+            <div className="flex flex-wrap justify-center items-center gap-4 lg:gap-5 w-full">
+
+                {/* Server Status Badge */}
+                <div
+                    className="flex items-center gap-4 px-5 py-3 rounded-2xl bg-black/60 border border-white/10 backdrop-blur-xl shadow-2xl transition-all duration-300 hover:border-white/20"
+                    style={{ boxShadow: '0 0 40px rgba(0,0,0,0.5)' }}
+                >
+                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-white/5 text-white">
+                        <div className={`w-3.5 h-3.5 rounded-full transition-colors ${serverInfo?.status === 'online' ? 'bg-green-500 animate-[pulse_2s_ease-in-out_infinite] shadow-[0_0_12px_rgba(34,197,94,0.8)]' : serverInfo?.status === 'starting' ? 'bg-yellow-500 animate-[pulse_1s_ease-in-out_infinite] shadow-[0_0_12px_rgba(234,179,8,0.8)]' : 'bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.8)]'}`} />
+                    </div>
+                    <div className="flex flex-col text-left pr-2">
+                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-0.5">Status</span>
+                        <span className="text-white font-bold text-sm lg:text-base tracking-tight capitalize">
+                            {serverInfo ? serverInfo.status : 'Pinging...'}
+                        </span>
+                    </div>
+                </div>
+
+                {/* Players Badge */}
+                <div
+                    className="flex items-center gap-4 px-5 py-3 rounded-2xl bg-black/60 border border-white/10 backdrop-blur-xl shadow-2xl transition-all duration-300 hover:border-white/20"
+                    style={{ boxShadow: '0 0 40px rgba(0,0,0,0.5)' }}
+                >
+                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-500/10 text-blue-400">
+                        <span className="material-symbols-outlined text-xl">group</span>
+                    </div>
+                    <div className="flex flex-col text-left pr-2">
+                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-0.5">Players Online</span>
+                        <span className="text-white font-bold text-sm lg:text-base tracking-tight">
+                            {serverInfo ? `${serverInfo.onlinePlayers || 0} / ${serverInfo.maxPlayers || 20}` : '—'}
+                        </span>
+                    </div>
+                </div>
+
+                {/* Version Badge */}
+                <div
+                    className="flex items-center gap-4 px-5 py-3 rounded-2xl bg-black/60 border border-white/10 backdrop-blur-xl shadow-2xl transition-all duration-300 hover:border-white/20"
+                    style={{ boxShadow: '0 0 40px rgba(0,0,0,0.5)' }}
+                >
+                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-purple-500/10 text-purple-400">
+                        <span className="material-symbols-outlined text-xl">extension</span>
+                    </div>
+                    <div className="flex flex-col text-left pr-2">
+                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-0.5">Version</span>
+                        <span className="text-white font-bold text-sm lg:text-base tracking-tight">
+                            {serverInfo?.version ? serverInfo.version : 'Minecraft 1.21+'}
+                        </span>
+                    </div>
+                </div>
+
                 {/* Server IP Badge */}
                 <div
-                    className="group relative flex items-center gap-4 pl-6 pr-2 py-2 rounded-2xl bg-black/60 border border-white/10 backdrop-blur-xl shadow-2xl transition-all duration-300 hover:border-primary/50 hover:shadow-primary/20"
+                    className="group relative flex items-center gap-4 pl-5 pr-2 py-2 rounded-2xl bg-black/60 border border-white/10 backdrop-blur-xl shadow-2xl transition-all duration-300 hover:border-primary/50 hover:shadow-primary/20"
                     style={{ boxShadow: '0 0 40px rgba(0,0,0,0.5)' }}
                 >
                     <div className="flex items-center justify-center w-10 h-10 rounded-full bg-green-500/20 text-green-400 group-hover:scale-110 transition-transform">
-                        <span className="material-symbols-outlined shrink-0 text-xl">signal_cellular_alt</span>
+                        <span className="material-symbols-outlined shrink-0 text-xl">dns</span>
                     </div>
 
-                    <div className="flex flex-col text-left pr-4">
+                    <div className="flex flex-col text-left pr-3">
                         <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-0.5">Server IP</span>
-                        <span className="text-white font-mono font-bold text-base md:text-lg select-all tracking-tight">{serverIP}</span>
+                        <span className="text-white font-mono font-bold text-sm lg:text-base select-all tracking-tight">{serverIP}</span>
                     </div>
 
                     <button
                         onClick={handleCopy}
-                        className={`relative overflow-hidden flex items-center justify-center w-12 h-12 rounded-xl transition-all duration-300 ${copied ? 'bg-green-500 text-white shadow-[0_0_20px_rgba(34,197,94,0.4)]' : 'bg-white/5 hover:bg-primary text-slate-300 hover:text-white hover:shadow-[0_0_20px_rgba(37,140,244,0.4)]'}`}
+                        className={`relative overflow-hidden flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-300 ${copied ? 'bg-green-500 text-white shadow-[0_0_20px_rgba(34,197,94,0.4)]' : 'bg-white/5 hover:bg-primary text-slate-300 hover:text-white hover:shadow-[0_0_20px_rgba(37,140,244,0.4)]'}`}
                         title="Copy IP"
                     >
-                        <span className={`material-symbols-outlined transition-transform duration-300 ${copied ? 'scale-0 absolute' : 'scale-100'}`}>content_copy</span>
-                        <span className={`material-symbols-outlined transition-transform duration-300 ${copied ? 'scale-100' : 'scale-0 absolute'}`}>check</span>
+                        <span className={`material-symbols-outlined text-[20px] transition-transform duration-300 ${copied ? 'scale-0 absolute' : 'scale-100'}`}>content_copy</span>
+                        <span className={`material-symbols-outlined text-[20px] transition-transform duration-300 ${copied ? 'scale-100' : 'scale-0 absolute'}`}>check</span>
                     </button>
                 </div>
             </div>
