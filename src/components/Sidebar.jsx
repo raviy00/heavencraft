@@ -49,7 +49,7 @@ export default function Sidebar({ mobileOpen, onClose }) {
                     style={{ borderBottom: '1px solid rgba(51,65,85,0.3)', minHeight: '120px' }}
                 >
                     <img
-                        src="/logo.png"
+                        src="/Logo.png"
                         alt="Heavencraft"
                         className="w-full max-w-[140px] drop-shadow-md object-contain"
                         onError={(e) => {

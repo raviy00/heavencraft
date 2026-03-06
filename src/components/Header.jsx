@@ -29,7 +29,7 @@ export default function Header() {
                     {/* Left: Logo and Name */}
                     <Link to="/" className="flex items-center gap-2 decoration-transparent group shrink-0">
                         <img
-                            src="/logo.png"
+                            src="/Logo.png"
                             alt="Heavencraft"
                             className="h-9 md:h-12 object-contain group-hover:scale-105 transition-transform duration-300"
                             style={{ filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.3))' }}
